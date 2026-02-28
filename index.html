@@ -12,7 +12,7 @@
 
 <header>
     <h1>Upright Smart Solution</h1>
-    <p>Property Management System</p>
+    <p>Tenancy Management System</p>
 </header>
 
 <main class="container">
@@ -23,26 +23,37 @@
         <div class="stat-card pending"><span>Total Arrears</span><strong id="statPending">PKR 0</strong></div>
     </div>
 
-    <div class="main-content">
-        <div class="form-column">
-            <section class="panel">
-                <h2>1. Register New Tenant</h2>
-                <div class="input-grid">
-                    <input type="text" id="tName" placeholder="Full Name">
-                    <input type="text" id="tUnit" placeholder="Premises On / Flat No">
-                    <input type="text" id="tPhone" placeholder="Phone Number">
-                    <input type="text" id="tCnic" placeholder="CNIC Number">
-                    <input type="text" id="tElec" placeholder="Electricity Meter A/C No">
-                    <input type="text" id="tGas" placeholder="Gas Meter A/C No">
-                    <div class="input-group">
-                        <label>Rented Since</label>
-                        <input type="date" id="tSince">
-                    </div>
-                    <input type="number" id="tDep" placeholder="Surety Deposit Amount">
-                    <input type="number" id="tFixedRent" placeholder="Monthly Fixed Rent">
+    <section class="panel">
+    <h2>1. Register New Tenant</h2>
+    <div class="registration-container" style="display: flex; gap: 20px;">
+        
+        <div class="form-column" style="flex: 1;">
+            <h3>Tenant Details</h3>
+            <div class="input-grid">
+                <input type="text" id="tName" placeholder="Full Name">
+                <input type="text" id="tPhone" placeholder="Phone Number">
+                <input type="text" id="tCnic" placeholder="CNIC Number">
+                <div class="input-group">
+                    <label>Rented Since</label>
+                    <input type="date" id="tSince">
                 </div>
-                <button class="btn-primary" onclick="saveTenant()">Save Tenant Record</button>
-            </section>
+            </div>
+        </div>
+
+        <div class="form-column" style="flex: 1;">
+            <h3>Property & Lease Details</h3>
+            <div class="input-grid">
+                <input type="text" id="tUnit" placeholder="Premises On / Flat No">
+                <input type="text" id="tElec" placeholder="Electricity Meter A/C No">
+                <input type="text" id="tGas" placeholder="Gas Meter A/C No">
+                <input type="number" id="tDep" placeholder="Surety Deposit Amount">
+                <input type="number" id="tFixedRent" placeholder="Monthly Fixed Rent">
+            </div>
+        </div>
+        
+    </div>
+    <button class="btn-primary" onclick="saveTenant()" style="margin-top: 20px;">Save Tenant Record</button>
+</section>
 
             <section class="panel">
                 <h2>2. Billing Details: <span id="activeName" style="color:var(--accent)">Select Tenant</span></h2>
