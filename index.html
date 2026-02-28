@@ -3,40 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upright Smart Solution - Pro v2.0</title>
+    <title>Upright Smart Solution - Pro v2.5</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root { --bg: #f8fafc; --panel: #ffffff; --primary: #0f172a; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
         body { background: var(--bg); color: #1e293b; line-height: 1.6; }
-        header { background: var(--primary); color: white; padding: 1.5rem; text-align: center; }
-        .nav-tabs { display: flex; justify-content: center; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
-        .tab-btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; background: rgba(255,255,255,0.1); color: white; transition: 0.3s; }
+        header { background: var(--primary); color: white; padding: 2rem 1rem; text-align: center; }
+        .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
+        .tab-btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.1); color: white; transition: 0.3s; }
         .tab-btn.active { background: var(--accent); }
-        .container { max-width: 1200px; margin: 1rem auto; padding: 0 1rem; }
+        .container { max-width: 1200px; margin: 1.5rem auto; padding: 0 1.5rem; }
         .view { display: none; }
         .view.active { display: block; }
-        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-        .stat-card { background: var(--panel); padding: 1.2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid #e2e8f0; }
-        .stat-card strong { display: block; font-size: 1.2rem; color: var(--primary); margin-top: 5px; }
+        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: var(--panel); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-bottom: 5px solid #e2e8f0; }
+        .stat-card strong { display: block; font-size: 1.3rem; color: var(--primary); margin-top: 5px; }
         .panel { background: var(--panel); padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
         .input-group label { font-size: 0.75rem; font-weight: bold; color: #64748b; margin-bottom: 4px; display: block; }
-        input, select { padding: 0.7rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; font-size: 0.9rem; margin-bottom: 10px; }
-        button { padding: 0.8rem; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; color: white; }
+        input, select { padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; font-size: 0.9rem; margin-bottom: 10px; }
+        button { padding: 0.9rem; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; color: white; }
         .btn-primary { background: var(--primary); width: 100%; }
         .btn-success { background: var(--success); width: 100%; }
         .btn-danger { background: var(--danger); }
         .btn-wa { background: #25D366; width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-sm { padding: 4px 8px; font-size: 0.75rem; background: #f1f5f9; color: var(--primary); border: 1px solid #ddd; }
+        .btn-sm { padding: 5px 10px; font-size: 0.75rem; background: #f1f5f9; color: var(--primary); border: 1px solid #ddd; border-radius: 4px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { text-align: left; padding: 0.8rem; border-bottom: 1px solid #f1f5f9; }
+        th, td { text-align: left; padding: 1rem; border-bottom: 1px solid #f1f5f9; }
         th { background: #f8fafc; color: #64748b; }
-        .status-PAID { color: var(--success); font-weight: bold; }
-        .status-UNPAID { color: var(--danger); font-weight: bold; }
         .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); }
-        .modal-content { background:#fff; margin:5% auto; padding:25px; border-radius:16px; width:90%; max-width:500px; position:relative; }
-        .search-box { margin-bottom: 15px; padding: 10px; border: 2px solid var(--accent); }
+        .modal-content { background:#fff; margin:5% auto; padding:30px; border-radius:16px; width:90%; max-width:600px; position:relative; }
+        .edit-mode { border: 2px solid var(--warning) !important; background: #fffbeb; }
     </style>
 </head>
 <body>
@@ -44,8 +42,8 @@
 <header>
     <h1>Upright Smart Solution</h1>
     <div class="nav-tabs">
-        <button class="tab-btn active" onclick="showTab('rentView')">Tenants</button>
-        <button class="tab-btn" onclick="showTab('insView')">Installments</button>
+        <button class="tab-btn active" onclick="showTab('rentView')">Property Management</button>
+        <button class="tab-btn" onclick="showTab('insView')">Installment System</button>
         <button class="tab-btn" onclick="showTab('repView')">Business Report</button>
     </div>
 </header>
@@ -53,46 +51,60 @@
 <div class="container">
     <div id="rentView" class="view active">
         <div class="dashboard-stats">
-            <div class="stat-card"><span>Active Tenants</span><strong id="statTenants">0</strong></div>
-            <div class="stat-card"><span>Total Receivables</span><strong id="statPending" style="color:var(--danger)">PKR 0</strong></div>
+            <div class="stat-card"><span>Total Tenants</span><strong id="statTenants">0</strong></div>
+            <div class="stat-card"><span>Monthly Rent Pool</span><strong id="statRent">PKR 0</strong></div>
+            <div class="stat-card"><span>Collected</span><strong id="statPaid" style="color:var(--success)">PKR 0</strong></div>
+            <div class="stat-card"><span>Pending Arrears</span><strong id="statPending" style="color:var(--danger)">PKR 0</strong></div>
         </div>
 
-        <section class="panel">
-            <h3>Register New Tenant</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <section class="panel" id="regPanel">
+            <h2 id="regTitle">1. Register New Tenant</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <div>
+                    <h4 style="color: var(--accent); margin-bottom:10px;">👤 Personal Details</h4>
+                    <input type="hidden" id="editId">
                     <div class="input-group"><label>Full Name</label><input type="text" id="tName"></div>
-                    <div class="input-group"><label>Unit / Shop #</label><input type="text" id="tUnit"></div>
-                    <div class="input-group"><label>Monthly Rent</label><input type="number" id="tFixedRent"></div>
+                    <div class="input-group"><label>Phone Number</label><input type="text" id="tPhone"></div>
+                    <div class="input-group"><label>CNIC Number</label><input type="text" id="tCnic"></div>
                 </div>
                 <div>
-                    <div class="input-group"><label>Phone</label><input type="text" id="tPhone"></div>
-                    <div class="input-group"><label>CNIC</label><input type="text" id="tCnic"></div>
-                    <button class="btn-primary" onclick="saveTenant()" style="margin-top: 22px;">Add Tenant</button>
+                    <h4 style="color: var(--accent); margin-bottom:10px;">🏠 Property Details</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="input-group"><label>Premises/Unit</label><input type="text" id="tUnit"></div>
+                        <div class="input-group"><label>Monthly Rent</label><input type="number" id="tFixedRent"></div>
+                        <div class="input-group"><label>Electric A/C #</label><input type="text" id="tElec"></div>
+                        <div class="input-group"><label>Gas A/C #</label><input type="text" id="tGas"></div>
+                    </div>
                 </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-primary" id="saveBtn" onclick="saveTenant()" style="flex: 3;">Save Tenant</button>
+                <button class="btn-danger" id="cancelEdit" onclick="resetForm()" style="display:none; flex: 1;">Cancel</button>
             </div>
         </section>
 
-        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 2rem;">
             <section class="panel">
-                <input type="text" class="search-box" placeholder="🔍 Search Name/Unit..." onkeyup="filterTenants(this.value)">
-                <table id="tenantTable">
-                    <thead><tr><th>Tenant</th><th>Unit</th><th>Action</th></tr></thead>
+                <h3>Registered Tenants</h3>
+                <input type="text" placeholder="🔍 Search Name or Unit..." onkeyup="filterTenants(this.value)" style="margin-bottom:15px;">
+                <table>
+                    <thead><tr><th>Name</th><th>Unit</th><th>Action</th></tr></thead>
                     <tbody id="tenantBody"></tbody>
                 </table>
             </section>
-            
             <section class="panel">
-                <h3>Billing: <span id="activeName" style="color:var(--accent)">Select a Tenant</span></h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <input type="month" id="bMonth">
-                    <input type="number" id="bRent" placeholder="Rent Amount">
-                    <input type="number" id="bElec" placeholder="Electric">
-                    <input type="number" id="bGas" placeholder="Gas">
-                    <input type="number" id="bArr" placeholder="Arrears">
-                    <select id="bStatus"><option value="UNPAID">UNPAID</option><option value="PAID">PAID</option></select>
+                <h3>Billing: <span id="activeName" style="color:var(--accent)">Select Tenant</span></h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="input-group"><label>Month</label><input type="month" id="bMonth"></div>
+                    <div class="input-group"><label>Rent</label><input type="number" id="bRent"></div>
+                    <div class="input-group"><label>Electric Bill</label><input type="number" id="bElec"></div>
+                    <div class="input-group"><label>Gas Bill</label><input type="number" id="bGas"></div>
+                    <div class="input-group"><label>Arrears</label><input type="number" id="bArr"></div>
+                    <div class="input-group"><label>Status</label>
+                        <select id="bStatus"><option value="UNPAID">UNPAID</option><option value="PAID">PAID</option></select>
+                    </div>
                 </div>
-                <button class="btn-success" onclick="generateInvoice()">Generate & Save PDF</button>
+                <button class="btn-success" onclick="generateInvoice()">Create & Download PDF</button>
                 <button id="waBtn" class="btn-wa" onclick="shareToWhatsApp()" style="display:none;">Share via WhatsApp</button>
             </section>
         </div>
@@ -100,18 +112,18 @@
 
     <div id="insView" class="view">
         <section class="panel">
-            <h3>New Installment Plan</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+            <h3>New Installment Sale</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
                 <input id="cName" placeholder="Customer Name">
                 <input id="cProduct" placeholder="Product">
                 <input id="cTotal" type="number" placeholder="Total Price">
                 <input id="cDown" type="number" placeholder="Down Payment">
-                <button class="btn-primary" onclick="addCustomer()">Add Sale</button>
+                <button class="btn-primary" onclick="addCustomer()">Register Sale</button>
             </div>
         </section>
         <section class="panel">
             <table>
-                <thead><tr><th>Customer</th><th>Product</th><th>Balance</th><th>Action</th></tr></thead>
+                <thead><tr><th>Customer</th><th>Product</th><th>Remaining Balance</th><th>Action</th></tr></thead>
                 <tbody id="customerTableBody"></tbody>
             </table>
         </section>
@@ -119,11 +131,10 @@
 
     <div id="repView" class="view">
         <div class="panel">
-            <h2>Monthly Financial Performance</h2>
-            <hr style="margin: 15px 0;">
-            <div class="dashboard-stats">
-                <div class="stat-card"><span>Total Rent Collected</span><strong id="repPaid" style="color:var(--success)">PKR 0</strong></div>
-                <div class="stat-card"><span>Total Rent Pending</span><strong id="repUnpaid" style="color:var(--danger)">PKR 0</strong></div>
+            <h2>Business Overview</h2>
+            <div class="dashboard-stats" style="margin-top:20px;">
+                <div class="stat-card"><span>Total Rent Income</span><strong id="repPaid" style="color:var(--success)">PKR 0</strong></div>
+                <div class="stat-card"><span>Uncollected Rent</span><strong id="repUnpaid" style="color:var(--danger)">PKR 0</strong></div>
                 <div class="stat-card"><span>Installment Receivables</span><strong id="repIns" style="color:var(--accent)">PKR 0</strong></div>
             </div>
         </div>
@@ -132,13 +143,13 @@
 
 <div id="insModal" class="modal">
     <div class="modal-content">
-        <span onclick="closeModal()" style="position:absolute; right:15px; top:10px; cursor:pointer;">✖</span>
-        <h3 id="modalTitle">Payments</h3>
-        <div style="display: flex; gap: 5px; margin: 15px 0;">
+        <span onclick="closeModal()" style="position:absolute; right:20px; cursor:pointer; font-size:24px;">&times;</span>
+        <h2 id="modalTitle">Customer</h2>
+        <div style="display: flex; gap: 10px; margin: 20px 0;">
             <input type="number" id="insAmount" placeholder="Amount">
-            <button class="btn-success" onclick="addInstallment()">Post</button>
+            <button class="btn-success" onclick="addInstallment()">Post Payment</button>
         </div>
-        <table id="historyTable"><thead><tr><th>Date</th><th>Amount</th></tr></thead><tbody id="historyTableBody"></tbody></table>
+        <table><thead><tr><th>Date</th><th>Amount</th></tr></thead><tbody id="historyTableBody"></tbody></table>
     </div>
 </div>
 
@@ -158,39 +169,102 @@
         if(id === 'repView') calculateReport();
     }
 
-    // TENANT LOGIC
+    function refreshUI() {
+        document.getElementById("statTenants").innerText = tenants.length;
+        document.getElementById("statRent").innerText = fmt(tenants.reduce((s, t) => s + Number(t.fixedRent || 0), 0));
+        let paid = 0, unpaid = 0;
+        invoices.forEach(i => {
+            let total = Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.arr);
+            i.status === "PAID" ? paid += total : unpaid += total;
+        });
+        document.getElementById("statPaid").innerText = fmt(paid);
+        document.getElementById("statPending").innerText = fmt(unpaid);
+        renderTenants(tenants);
+        renderCustomers();
+    }
+
+    function renderTenants(list) {
+        document.getElementById("tenantBody").innerHTML = list.map(t => `
+            <tr><td>${t.name}</td><td>${t.unit}</td>
+            <td>
+                <button class="btn-sm" onclick="loadTenant(${t.id})">Bill</button>
+                <button class="btn-sm" style="background:#fef3c7" onclick="editTenant(${t.id})">Edit</button>
+                <button class="btn-sm btn-danger" style="color:white" onclick="deleteItem('tenant', ${t.id})">X</button>
+            </td></tr>`).join('');
+    }
+
+    function filterTenants(q) {
+        const filtered = tenants.filter(t => t.name.toLowerCase().includes(q.toLowerCase()) || t.unit.toLowerCase().includes(q.toLowerCase()));
+        renderTenants(filtered);
+    }
+
+    // TENANT EDIT/SAVE LOGIC
     function saveTenant() {
-        const t = { id: Date.now(), name: document.getElementById("tName").value, phone: document.getElementById("tPhone").value, cnic: document.getElementById("tCnic").value, unit: document.getElementById("tUnit").value, fixedRent: document.getElementById("tFixedRent").value };
-        if(!t.name || !t.unit) return alert("Fill Name & Unit");
-        tenants.push(t);
+        const id = document.getElementById("editId").value;
+        const tenantData = {
+            id: id ? Number(id) : Date.now(),
+            name: document.getElementById("tName").value,
+            phone: document.getElementById("tPhone").value,
+            cnic: document.getElementById("tCnic").value,
+            unit: document.getElementById("tUnit").value,
+            fixedRent: document.getElementById("tFixedRent").value,
+            elec: document.getElementById("tElec").value,
+            gas: document.getElementById("tGas").value
+        };
+
+        if(!tenantData.name || !tenantData.unit) return alert("Name and Unit are required!");
+
+        if(id) {
+            const index = tenants.findIndex(t => t.id === Number(id));
+            tenants[index] = tenantData;
+        } else {
+            tenants.push(tenantData);
+        }
+
         localStorage.setItem("uss_tenants", JSON.stringify(tenants));
+        resetForm();
         refreshUI();
     }
 
-    function filterTenants(query) {
-        const q = query.toLowerCase();
-        const filtered = tenants.filter(t => t.name.toLowerCase().includes(q) || t.unit.toLowerCase().includes(q));
-        renderTenantList(filtered);
+    function editTenant(id) {
+        const t = tenants.find(x => x.id === id);
+        document.getElementById("editId").value = t.id;
+        document.getElementById("tName").value = t.name;
+        document.getElementById("tPhone").value = t.phone;
+        document.getElementById("tCnic").value = t.cnic;
+        document.getElementById("tUnit").value = t.unit;
+        document.getElementById("tFixedRent").value = t.fixedRent;
+        document.getElementById("tElec").value = t.elec;
+        document.getElementById("tGas").value = t.gas;
+
+        document.getElementById("regTitle").innerText = "Edit Tenant: " + t.name;
+        document.getElementById("saveBtn").innerText = "Update Tenant Information";
+        document.getElementById("saveBtn").classList.add("btn-success");
+        document.getElementById("cancelEdit").style.display = "block";
+        document.getElementById("regPanel").scrollIntoView({behavior: "smooth"});
     }
 
-    function renderTenantList(list = tenants) {
-        document.getElementById("tenantBody").innerHTML = list.map(t => `
-            <tr><td>${t.name}</td><td>${t.unit}</td>
-            <td><button class="btn-sm" onclick="loadTenant(${t.id})">Select</button>
-            <button class="btn-sm btn-danger" style="color:white" onclick="deleteItem('tenant', ${t.id})">X</button></td></tr>`).join('');
+    function resetForm() {
+        document.getElementById("editId").value = "";
+        ["tName", "tPhone", "tCnic", "tUnit", "tFixedRent", "tElec", "tGas"].forEach(i => document.getElementById(i).value = "");
+        document.getElementById("regTitle").innerText = "1. Register New Tenant";
+        document.getElementById("saveBtn").innerText = "Save Tenant";
+        document.getElementById("saveBtn").classList.remove("btn-success");
+        document.getElementById("cancelEdit").style.display = "none";
     }
 
+    // BILLING
     function loadTenant(id) {
         activeID = id;
         const t = tenants.find(x => x.id === id);
-        document.getElementById("activeName").innerText = t.name + " (" + t.unit + ")";
+        document.getElementById("activeName").innerText = t.name;
         document.getElementById("bRent").value = t.fixedRent;
-        const unpaidArr = invoices.filter(i => i.tenantId === id && i.status === "UNPAID").reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.arr)), 0);
-        document.getElementById("bArr").value = unpaidArr;
+        const arrears = invoices.filter(i => i.tenantId === id && i.status === "UNPAID").reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.arr)), 0);
+        document.getElementById("bArr").value = arrears;
     }
 
     function generateInvoice() {
-        if(!activeID) return alert("Select tenant first");
+        if(!activeID) return alert("Please select a tenant from the list first!");
         const inv = { id: Date.now(), tenantId: activeID, month: document.getElementById("bMonth").value, rent: document.getElementById("bRent").value, elec: document.getElementById("bElec").value, gas: document.getElementById("bGas").value, arr: document.getElementById("bArr").value, status: document.getElementById("bStatus").value };
         invoices.push(inv);
         localStorage.setItem("uss_invoices", JSON.stringify(invoices));
@@ -198,83 +272,82 @@
         refreshUI();
     }
 
-    // PDF & SHARING
     function createPDF(inv) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const t = tenants.find(x => x.id === inv.tenantId);
-        const total = Number(inv.rent) + Number(inv.elec) + Number(inv.gas) + Number(inv.arr);
-
-        doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 30, 'F');
-        doc.setTextColor(255); doc.setFontSize(18); doc.text("Upright Smart Solution", 15, 20);
+        
+        doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 35, 'F');
+        doc.setTextColor(255); doc.setFontSize(22); doc.text("Upright Smart Solution", 15, 22);
+        
         doc.setTextColor(0); doc.setFontSize(10);
-        doc.text(`Tenant: ${t.name}`, 15, 45); doc.text(`Unit: ${t.unit}`, 15, 52);
-        doc.text(`Month: ${inv.month}`, 150, 45);
+        doc.text(`Tenant: ${t.name}`, 15, 45); 
+        doc.text(`Unit: ${t.unit}`, 15, 52);
+        doc.text(`Month: ${inv.month || 'Current'}`, 150, 45);
 
-        doc.setFont("helvetica", "bold");
-        doc.text("Description", 15, 70); doc.text("Amount", 150, 70);
-        doc.setFont("helvetica", "normal");
-        doc.text("Current Rent", 15, 80); doc.text(fmt(inv.rent), 150, 80);
-        doc.text("Electricity", 15, 90); doc.text(fmt(inv.elec), 150, 90);
-        doc.text("Gas", 15, 100); doc.text(fmt(inv.gas), 150, 100);
-        doc.text("Arrears", 15, 110); doc.text(fmt(inv.arr), 150, 110);
-        doc.line(15, 115, 180, 115);
-        doc.text("TOTAL DUE", 15, 125); doc.text(fmt(total), 150, 125);
-        doc.text(`STATUS: ${inv.status}`, 15, 140);
+        doc.line(15, 60, 195, 60);
+        doc.text(`Description`, 15, 68); doc.text(`Amount (PKR)`, 150, 68);
+        doc.line(15, 70, 195, 70);
+
+        let y = 80;
+        const rows = [["Monthly Rent", inv.rent], ["Electric Bill", inv.elec], ["Gas Bill", inv.gas], ["Previous Arrears", inv.arr]];
+        rows.forEach(r => {
+            doc.text(r[0], 15, y); doc.text(Number(r[1]).toLocaleString(), 150, y);
+            y += 10;
+        });
+
+        const total = Number(inv.rent)+Number(inv.elec)+Number(inv.gas)+Number(inv.arr);
+        doc.setFont("helvetica", "bold"); doc.line(15, y, 195, y); y += 10;
+        doc.text(`TOTAL AMOUNT DUE`, 15, y); doc.text(total.toLocaleString(), 150, y);
+        
+        doc.setFont("helvetica", "normal"); doc.text(`Status: ${inv.status}`, 15, y + 20);
 
         const blob = doc.output("blob");
         shareFile = new File([blob], `Invoice_${t.unit}.pdf`, { type: "application/pdf" });
-        doc.save(`Invoice_${t.unit}.pdf`);
+        doc.save(`Invoice_${t.name}_${inv.month}.pdf`);
         document.getElementById("waBtn").style.display = "flex";
     }
 
     async function shareToWhatsApp() {
-        if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
-            await navigator.share({ files: [shareFile], title: 'Invoice', text: 'Monthly Bill' });
-        } else { alert("Sharing not supported on this browser. Send the file manually."); }
+        if (navigator.share) {
+            await navigator.share({ files: [shareFile], title: 'Invoice', text: 'Please find your monthly bill attached.' });
+        } else {
+            alert("Web sharing not supported on this browser. Please send the downloaded file manually.");
+        }
     }
 
-    // INSTALLMENT LOGIC
+    // INSTALLMENTS
+    function renderCustomers() {
+        document.getElementById("customerTableBody").innerHTML = customers.map((c, i) => `
+            <tr><td>${c.name}</td><td>${c.product}</td><td>${fmt(c.remaining)}</td>
+            <td><button class="btn-sm" onclick="openInsModal(${i})">Manage</button>
+            <button class="btn-sm btn-danger" style="color:white" onclick="deleteItem('cust', ${i})">X</button></td></tr>`).join('');
+    }
+
     function addCustomer() {
-        const c = { id: Date.now(), name: document.getElementById("cName").value, product: document.getElementById("cProduct").value, total: Number(document.getElementById("cTotal").value), rem: Number(document.getElementById("cTotal").value) - Number(document.getElementById("cDown").value), payments: [] };
+        const c = { name: document.getElementById("cName").value, product: document.getElementById("cProduct").value, total: Number(document.getElementById("cTotal").value), remaining: Number(document.getElementById("cTotal").value) - Number(document.getElementById("cDown").value), payments: [] };
+        if(!c.name) return alert("Enter customer name");
         customers.push(c);
         localStorage.setItem("uss_customers", JSON.stringify(customers));
         refreshUI();
     }
 
-    function openInsModal(idx) {
-        currentCustIdx = idx;
-        document.getElementById("modalTitle").innerText = customers[idx].name;
+    function openInsModal(i) {
+        currentCustIdx = i; document.getElementById("modalTitle").innerText = customers[i].name;
         document.getElementById("insModal").style.display = "block";
-        renderHistory();
+        document.getElementById("historyTableBody").innerHTML = customers[i].payments.map(p => `<tr><td>${p.date}</td><td>${fmt(p.amount)}</td></tr>`).join('');
     }
 
     function addInstallment() {
         const amt = Number(document.getElementById("insAmount").value);
         customers[currentCustIdx].payments.push({ date: new Date().toLocaleDateString(), amount: amt });
-        customers[currentCustIdx].rem -= amt;
+        customers[currentCustIdx].remaining -= amt;
         localStorage.setItem("uss_customers", JSON.stringify(customers));
-        renderHistory(); refreshUI();
-    }
-
-    function renderHistory() {
-        document.getElementById("historyTableBody").innerHTML = customers[currentCustIdx].payments.map(p => `<tr><td>${p.date}</td><td>${fmt(p.amount)}</td></tr>`).join('');
-    }
-
-    // GLOBAL UTILS
-    function refreshUI() {
-        renderTenantList();
-        document.getElementById("statTenants").innerText = tenants.length;
-        const pending = invoices.filter(i => i.status === "UNPAID").reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.arr)), 0);
-        document.getElementById("statPending").innerText = fmt(pending);
-        document.getElementById("customerTableBody").innerHTML = customers.map((c, i) => `
-            <tr><td>${c.name}</td><td>${c.product}</td><td>${fmt(c.rem)}</td>
-            <td><button class="btn-sm" onclick="openInsModal(${i})">Pay</button>
-            <button class="btn-sm btn-danger" style="color:white" onclick="deleteItem('cust', ${i})">X</button></td></tr>`).join('');
+        closeModal(); refreshUI();
     }
 
     function deleteItem(type, id) {
-        if(!confirm("Are you sure?")) return;
+        if(!confirm("Are you sure you want to delete this record?")) return;
         if(type === 'tenant') tenants = tenants.filter(t => t.id !== id);
         else customers.splice(id, 1);
         localStorage.setItem("uss_tenants", JSON.stringify(tenants));
@@ -283,16 +356,12 @@
     }
 
     function calculateReport() {
-        const paid = invoices.filter(i => i.status === "PAID").reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.arr)), 0);
-        const unpaid = invoices.filter(i => i.status === "UNPAID").reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.arr)), 0);
-        const insRem = customers.reduce((s, c) => s + c.rem, 0);
-        document.getElementById("repPaid").innerText = fmt(paid);
-        document.getElementById("repUnpaid").innerText = fmt(unpaid);
-        document.getElementById("repIns").innerText = fmt(insRem);
+        document.getElementById("repPaid").innerText = fmt(invoices.filter(i => i.status === "PAID").reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.arr)), 0));
+        document.getElementById("repUnpaid").innerText = fmt(invoices.filter(i => i.status === "UNPAID").reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.arr)), 0));
+        document.getElementById("repIns").innerText = fmt(customers.reduce((s, c) => s + c.remaining, 0));
     }
 
     function closeModal() { document.getElementById("insModal").style.display = "none"; }
-    
     refreshUI();
 </script>
 </body>
