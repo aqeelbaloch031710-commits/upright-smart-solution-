@@ -6,10 +6,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
 
-    // Fix Date Format to DD-MM-YYYY
     const formatDate = (dateStr) => {
         if (!dateStr) return "N/A";
-        const parts = dateStr.split("-"); // Handles YYYY-MM-DD or YYYY-MM
+        const parts = dateStr.split("-");
         return parts.reverse().join("-");
     };
 
@@ -21,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let paidTotal = 0, unpaidTotal = 0;
         invoices.forEach(i => {
             let total = Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth);
+            // Treat Partial and Unpaid as "Pending"
             i.status === "PAID" ? paidTotal += total : unpaidTotal += total;
         });
         document.getElementById("statPaid").innerText = fmt(paidTotal);
@@ -37,19 +37,36 @@ document.addEventListener("DOMContentLoaded", () => {
             </tr>`).join('');
     }
 
+    // --- NEW: Clear Registration Form ---
+    window.clearTenantForm = () => {
+        if(confirm("Clear all entered data?")) {
+            const fields = ["tName", "tUnit", "tPhone", "tCnic", "tElec", "tGas", "tSince", "tDep", "tFixedRent"];
+            fields.forEach(id => document.getElementById(id).value = "");
+        }
+    };
+
     window.saveTenant = () => {
         const t = {
-            id: Date.now(), name: document.getElementById("tName").value,
-            unit: document.getElementById("tUnit").value, phone: document.getElementById("tPhone").value,
-            cnic: document.getElementById("tCnic").value, elec: document.getElementById("tElec").value,
-            gas: document.getElementById("tGas").value, since: document.getElementById("tSince").value,
-            dep: document.getElementById("tDep").value, fixedRent: document.getElementById("tFixedRent").value
+            id: Date.now(), 
+            name: document.getElementById("tName").value,
+            unit: document.getElementById("tUnit").value, 
+            phone: document.getElementById("tPhone").value,
+            cnic: document.getElementById("tCnic").value, 
+            elec: document.getElementById("tElec").value,
+            gas: document.getElementById("tGas").value, 
+            since: document.getElementById("tSince").value,
+            dep: document.getElementById("tDep").value, 
+            fixedRent: document.getElementById("tFixedRent").value
         };
         if(!t.name || !t.unit) return alert("Please fill Name and Unit Number");
+        
         tenants.push(t);
         localStorage.setItem("uss_tenants", JSON.stringify(tenants));
         refreshUI();
         alert("Tenant Record Saved Successfully!");
+        // Clear fields after save
+        const fields = ["tName", "tUnit", "tPhone", "tCnic", "tElec", "tGas", "tSince", "tDep", "tFixedRent"];
+        fields.forEach(id => document.getElementById(id).value = "");
     };
 
     window.delTenant = (id) => {
@@ -71,8 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const t = tenants.find(x => x.id === id);
         document.getElementById("activeName").innerText = t.name;
         document.getElementById("bRent").value = t.fixedRent;
-        // Auto-calculate arrears from all unpaid bills
-        const arrears = invoices.filter(i => i.tenantId === id && i.status === "UNPAID")
+        const arrears = invoices.filter(i => i.tenantId === id && (i.status === "UNPAID" || i.status === "PARTIALLY PAID"))
             .reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth)), 0);
         document.getElementById("bArr").value = arrears;
         renderHistory(id);
@@ -94,21 +110,14 @@ document.addEventListener("DOMContentLoaded", () => {
         refreshUI();
     };
 
-   // Inside window.createPDF
-doc.setFont("helvetica", "bold");
-// Change color if partially paid
-if(inv.status === "PARTIALLY PAID") {
-    doc.setTextColor(255, 140, 0); // Orange color for partial
-} else if (inv.status === "PAID") {
-    doc.setTextColor(0, 128, 0); // Green for paid
-} else {
-    doc.setTextColor(255, 0, 0); // Red for unpaid
-}
+    window.createPDF = (id) => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const inv = invoices.find(x => x.id === id);
+        const t = tenants.find(x => x.id === inv.tenantId);
+        const total = Number(inv.rent)+Number(inv.elec)+Number(inv.gas)+Number(inv.maint)+Number(inv.arr)+Number(inv.oth);
 
-doc.text("Payment Status: " + inv.status, 20, y+15);
-doc.setTextColor(0, 0, 0); // Reset to black
-    
-        // --- PDF BLUE HEADER ---
+        // --- PDF HEADER ---
         doc.setFillColor(15, 23, 42); 
         doc.rect(0, 0, 210, 40, 'F');
         doc.setTextColor(255, 255, 255);
@@ -121,7 +130,6 @@ doc.setTextColor(0, 0, 0); // Reset to black
         doc.text(`Receipt No: USS-${inv.id} | Period: ${formatDate(inv.month)}`, 105, 48, {align: "center"});
         doc.line(20, 52, 190, 52);
 
-        // --- TWO COLUMN REARRANGED LAYOUT ---
         let leftX = 20, rightX = 110, y = 62;
 
         // Left Side: Tenant Details
@@ -140,7 +148,7 @@ doc.setTextColor(0, 0, 0); // Reset to black
         y = 62;
         doc.setFont("helvetica", "bold"); doc.text("Rented Property Details", rightX, y);
         y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("Premises on rented:", rightX, y);
+        doc.setFont("helvetica", "bold"); doc.text("Premises On/Unit:", rightX, y);
         doc.setFont("helvetica", "normal"); doc.text(t.unit, rightX + 45, y);
         y += 8;
         doc.setFont("helvetica", "bold"); doc.text("Surety Deposit:", rightX, y);
@@ -172,21 +180,27 @@ doc.setTextColor(0, 0, 0); // Reset to black
         y += 18;
         items.forEach(item => {
             doc.setFont("helvetica", "normal"); doc.text(item[0], 25, y);
-            doc.setFillColor(255, 255, 0); doc.rect(148, y-5, 40, 7, 'F'); // Yellow Highlight
+            doc.setFillColor(255, 255, 0); doc.rect(148, y-5, 40, 7, 'F');
             doc.text(item[1], 150, y);
             y += 10;
         });
 
         doc.setFont("helvetica", "bold");
-        doc.setFillColor(255, 255, 0); doc.rect(148, y-5, 40, 10, 'F'); // Total Highlight
+        doc.setFillColor(255, 255, 0); doc.rect(148, y-5, 40, 10, 'F');
         doc.text("Grand Total to Pay", 25, y+2); doc.text(fmt(total), 150, y+2);
         
+        // Color Logic for Status in PDF
+        if(inv.status === "PARTIALLY PAID") doc.setTextColor(255, 140, 0);
+        else if (inv.status === "PAID") doc.setTextColor(0, 128, 0);
+        else doc.setTextColor(255, 0, 0);
+
         doc.text("Payment Status: " + inv.status, 20, y+15);
+        doc.setTextColor(0, 0, 0);
+
         y += 40;
         doc.text("________________", 25, y); doc.text("Signature Landlord", 25, y+5);
         doc.text("________________", 140, y); doc.text("Signature Tenant", 140, y+5);
 
-        // Automatic Computer Download
         const fileName = `Invoice_${t.name}_${inv.month}.pdf`;
         const blob = doc.output('blob');
         const url = URL.createObjectURL(blob);
@@ -195,7 +209,6 @@ doc.setTextColor(0, 0, 0); // Reset to black
         document.body.appendChild(link); link.click();
         document.body.removeChild(link);
 
-        // Prepare for WhatsApp Share
         shareFile = new File([blob], fileName, { type: 'application/pdf' });
         document.getElementById("waBtn").style.display = "block";
     };
@@ -213,7 +226,7 @@ doc.setTextColor(0, 0, 0); // Reset to black
     function renderHistory(tid) {
         document.getElementById("invoiceBody").innerHTML = invoices.filter(i => i.tenantId === tid).map(i => `
             <tr><td>${formatDate(i.month)}</td><td>${fmt(Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth))}</td>
-            <td class="status-${i.status}">${i.status}</td>
+            <td class="status-${i.status.replace(' ', '-')}">${i.status}</td>
             <td><button class="btn-sm" onclick="createPDF(${i.id})">Save</button>
             <button class="btn-sm btn-danger" onclick="delInvoice(${i.id})">X</button></td></tr>`).join('');
     }
