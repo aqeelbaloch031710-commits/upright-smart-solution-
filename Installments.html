@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upright Smart Solution – Installment System</title>
+<style>
+/* Using the same sleek theme for consistency */
+body{font-family:'Segoe UI',sans-serif; background:#f1f5f9; margin:0; padding:0; color:#334155;}
+header{background:#0f172a; color:#fff; padding:20px; font-size:22px; font-weight:bold; display:flex; justify-content:space-between; align-items:center;}
+.container{padding:20px; max-width: 1200px; margin: 0 auto;}
+.card{background:#fff; padding:25px; border-radius:12px; margin-bottom:25px; box-shadow:0 4px 12px rgba(0,0,0,0.05); border:1px solid #e2e8f0;}
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;}
+input,select,button,textarea{padding:12px; width:100%; border:1px solid #cbd5e1; border-radius:8px; box-sizing:border-box;}
+button{background:#2563eb; color:#fff; border:none; font-weight:bold; cursor:pointer;}
+button.nav-btn{background:#6366f1; width:auto; padding:8px 15px;}
+table{width:100%; border-collapse:collapse; margin-top:10px;}
+th,td{padding:14px; border-bottom:1px solid #f1f5f9; text-align:left;}
+th{background:#f8fafc; color:#64748b; font-size:12px; text-transform:uppercase;}
+.badge{padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;}
+.badge-balance{background:#fee2e2; color:#b91c1c;}
+/* Modal */
+.modal {display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); overflow-y:auto;}
+.modal-content {background:#fff; margin:2% auto; padding:30px; border-radius:16px; width:90%; max-width:1000px; position:relative;}
+</style>
+</head>
+<body>
+
+<header>
+    <span>Upright Installment System</span>
+    <button class="nav-btn" onclick="location.href='index.html'">← Back to Renters</button>
+</header>
+
+<div class="container">
+    <div class="card">
+        <h3>New Installment Sale</h3>
+        <div class="grid">
+            <input id="cName" placeholder="Customer Name">
+            <input id="cPhone" placeholder="Phone Number">
+            <input id="cCNIC" placeholder="CNIC Number">
+            <input id="cProduct" placeholder="Product Name (e.g. iPhone 15)">
+            <input id="cTotal" type="number" placeholder="Total Product Price">
+            <input id="cDown" type="number" placeholder="Down Payment">
+            <button onclick="addCustomer()">Register Sale</button>
+        </div>
+        <textarea id="cAddress" style="margin-top:10px;" placeholder="Full Address"></textarea>
+    </div>
+
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3>Active Installment Accounts</h3>
+            <input id="search" placeholder="Search CNIC or Name..." onkeyup="renderTable()" style="width:250px;">
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Total Price</th>
+                        <th>Down Payment</th>
+                        <th>Remaining</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="customerTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="insModal" class="modal">
+    <div class="modal-content">
+        <span onclick="closeModal()" style="position:absolute; right:20px; cursor:pointer; font-size:24px;">&times;</span>
+        <h2 id="modalTitle">Customer Name</h2>
+        <p id="modalSubtitle" style="color:#64748b;"></p>
+
+        <div class="card" style="background:#f8fafc; box-shadow:none;">
+            <h4>Receive Installment</h4>
+            <div class="grid">
+                <input type="date" id="insDate">
+                <input type="number" id="insAmount" placeholder="Amount Paid">
+                <select id="insMethod">
+                    <option>Cash</option>
+                    <option>Bank Transfer</option>
+                    <option>Check</option>
+                </select>
+                <button onclick="addInstallment()">Post Payment</button>
+            </div>
+        </div>
+
+        <h4>Payment History</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Amount Paid</th>
+                    <th>Method</th>
+                    <th>Receipt</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+const STORAGE_KEY = "upright_installments_v1";
+let customers = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+let currentIdx = null;
+
+function addCustomer() {
+    const name = document.getElementById("cName").value;
+    const product = document.getElementById("cProduct").value;
+    const total = Number(document.getElementById("cTotal").value);
+    const down = Number(document.getElementById("cDown").value);
+    
+    if(!name || !product || !total) return alert("Please fill details");
+
+    customers.push({
+        name, 
+        phone: document.getElementById("cPhone").value,
+        cnic: document.getElementById("cCNIC").value,
+        address: document.getElementById("cAddress").value,
+        product,
+        totalPrice: total,
+        downPayment: down,
+        remaining: total - down,
+        payments: []
+    });
+    
+    saveData();
+    renderTable();
+    clearInputs();
+}
+
+function renderTable() {
+    const tbody = document.getElementById("customerTableBody");
+    tbody.innerHTML = "";
+    customers.forEach((c, i) => {
+        tbody.innerHTML += `<tr>
+            <td><strong>${c.name}</strong><br><small>${c.cnic}</small></td>
+            <td>${c.product}</td>
+            <td>${c.totalPrice.toLocaleString()}</td>
+            <td>${c.downPayment.toLocaleString()}</td>
+            <td><span class="badge badge-balance">${c.remaining.toLocaleString()}</span></td>
+            <td><button onclick="openModal(${i})">Manage</button></td>
+        </tr>`;
+    });
+}
+
+function openModal(i) {
+    currentIdx = i;
+    const c = customers[i];
+    document.getElementById("modalTitle").innerText = c.name;
+    document.getElementById("modalSubtitle").innerText = `${c.product} | Balance: ${c.remaining.toLocaleString()}`;
+    document.getElementById("insModal").style.display = "block";
+    renderHistory();
+}
+
+function addInstallment() {
+    const amt = Number(document.getElementById("insAmount").value);
+    if(!amt) return;
+
+    customers[currentIdx].payments.push({
+        date: document.getElementById("insDate").value,
+        amount: amt,
+        method: document.getElementById("insMethod").value
+    });
+
+    customers[currentIdx].remaining -= amt;
+    saveData();
+    renderHistory();
+    renderTable();
+    document.getElementById("insAmount").value = "";
+}
+
+function renderHistory() {
+    const tbody = document.getElementById("historyTableBody");
+    tbody.innerHTML = "";
+    customers[currentIdx].payments.forEach((p, i) => {
+        tbody.innerHTML += `<tr>
+            <td>${p.date}</td>
+            <td>${p.amount.toLocaleString()}</td>
+            <td>${p.method}</td>
+            <td><button style="padding:5px;" onclick="printReceipt(${i})">PDF</button></td>
+        </tr>`;
+    });
+}
+
+function printReceipt(payIdx) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const c = customers[currentIdx];
+    const p = c.payments[payIdx];
+
+    doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255); doc.setFontSize(20); doc.text("INSTALLMENT RECEIPT", 15, 25);
+    
+    doc.setTextColor(0); doc.setFontSize(10);
+    doc.text(`Customer: ${c.name}`, 15, 50);
+    doc.text(`CNIC: ${c.cnic}`, 15, 55);
+    doc.text(`Product: ${c.product}`, 15, 60);
+    
+    doc.autoTable({
+        startY: 70,
+        head: [['Date', 'Description', 'Method', 'Amount']],
+        body: [[p.date, "Monthly Installment", p.method, p.amount.toLocaleString()]],
+        theme: 'striped'
+    });
+
+    doc.text(`Remaining Balance: ${c.remaining.toLocaleString()}`, 15, doc.lastAutoTable.finalY + 10);
+    doc.save(`Receipt_${c.name}.pdf`);
+}
+
+function closeModal() { document.getElementById("insModal").style.display = "none"; }
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(customers)); }
+function clearInputs() { 
+    ["cName","cPhone","cCNIC","cProduct","cTotal","cDown","cAddress"].forEach(id => document.getElementById(id).value = "");
+}
+renderTable();
+</script>
+</body>
+</html>
