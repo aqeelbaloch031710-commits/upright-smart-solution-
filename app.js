@@ -94,13 +94,20 @@ document.addEventListener("DOMContentLoaded", () => {
         refreshUI();
     };
 
-    window.createPDF = (id) => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const inv = invoices.find(x => x.id === id);
-        const t = tenants.find(x => x.id === inv.tenantId);
-        const total = Number(inv.rent)+Number(inv.elec)+Number(inv.gas)+Number(inv.maint)+Number(inv.arr)+Number(inv.oth);
+   // Inside window.createPDF
+doc.setFont("helvetica", "bold");
+// Change color if partially paid
+if(inv.status === "PARTIALLY PAID") {
+    doc.setTextColor(255, 140, 0); // Orange color for partial
+} else if (inv.status === "PAID") {
+    doc.setTextColor(0, 128, 0); // Green for paid
+} else {
+    doc.setTextColor(255, 0, 0); // Red for unpaid
+}
 
+doc.text("Payment Status: " + inv.status, 20, y+15);
+doc.setTextColor(0, 0, 0); // Reset to black
+    
         // --- PDF BLUE HEADER ---
         doc.setFillColor(15, 23, 42); 
         doc.rect(0, 0, 210, 40, 'F');
