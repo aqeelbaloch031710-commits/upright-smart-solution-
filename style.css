@@ -41,3 +41,28 @@ th, td { text-align: left; padding: 1rem; border-bottom: 1px solid #f1f5f9; }
 th { background: #f8fafc; position: sticky; top: 0; color: #64748b; }
 .status-PAID { color: var(--success); font-weight: bold; }
 .status-UNPAID { color: var(--danger); font-weight: bold; }
+.two-column-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sub-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #1e293b;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .two-column-grid {
+    grid-template-columns: 1fr;
+  }
+}
