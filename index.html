@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upright Smart Solution - PMS Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<header>
+    <h1>Upright Smart Solution</h1>
+    <p>Property Management System</p>
+</header>
+
+<main class="container">
+    <div class="dashboard-stats">
+        <div class="stat-card"><span>Total Tenants</span><strong id="statTenants">0</strong></div>
+        <div class="stat-card"><span>Monthly Rent Pool</span><strong id="statRent">PKR 0</strong></div>
+        <div class="stat-card paid"><span>Total Collected</span><strong id="statPaid">PKR 0</strong></div>
+        <div class="stat-card pending"><span>Total Arrears</span><strong id="statPending">PKR 0</strong></div>
+    </div>
+
+    <div class="main-content">
+        <div class="form-column">
+            <section class="panel">
+                <h2>1. Register New Tenant</h2>
+                <div class="input-grid">
+                    <input type="text" id="tName" placeholder="Full Name">
+                    <input type="text" id="tUnit" placeholder="Premises On / Flat No">
+                    <input type="text" id="tPhone" placeholder="Phone Number">
+                    <input type="text" id="tCnic" placeholder="CNIC Number">
+                    <input type="text" id="tElec" placeholder="Electricity Meter A/C No">
+                    <input type="text" id="tGas" placeholder="Gas Meter A/C No">
+                    <div class="input-group">
+                        <label>Rented Since</label>
+                        <input type="date" id="tSince">
+                    </div>
+                    <input type="number" id="tDep" placeholder="Surety Deposit Amount">
+                    <input type="number" id="tFixedRent" placeholder="Monthly Fixed Rent">
+                </div>
+                <button class="btn-primary" onclick="saveTenant()">Save Tenant Record</button>
+            </section>
+
+            <section class="panel">
+                <h2>2. Billing Details: <span id="activeName" style="color:var(--accent)">Select Tenant</span></h2>
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label>Billing Month</label>
+                        <input type="month" id="bMonth">
+                    </div>
+                    <input type="number" id="bRent" placeholder="Current Rent">
+                    <input type="number" id="bElec" placeholder="Electricity Bill">
+                    <input type="number" id="bGas" placeholder="Gas Bill">
+                    <input type="number" id="bMaint" placeholder="Maintenance / Repairing">
+                    <input type="number" id="bArr" placeholder="Previous Arrears">
+                    <input type="number" id="bOth" placeholder="Other Charges">
+                </div>
+                <select id="bStatus">
+                    <option value="UNPAID">UNPAID</option>
+                    <option value="PAID">PAID</option>
+                </select>
+                <div class="btn-group">
+                    <button class="btn-success" onclick="generateInvoice()">Download PDF Invoice</button>
+                    <button id="waBtn" class="btn-wa" onclick="shareToWhatsApp()" style="display:none;">WhatsApp Share</button>
+                </div>
+            </section>
+        </div>
+
+        <div class="list-column">
+            <section class="panel">
+                <h3>Registered Tenants</h3>
+                <div class="scroll-table">
+                    <table>
+                        <thead><tr><th>Tenant Name</th><th>Unit</th><th>Action</th></tr></thead>
+                        <tbody id="tenantBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h3>Billing History</h3>
+                <div class="scroll-table">
+                    <table>
+                        <thead><tr><th>Month</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody id="invoiceBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
