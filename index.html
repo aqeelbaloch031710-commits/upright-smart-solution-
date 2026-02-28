@@ -248,71 +248,68 @@
     };
 
     window.createPDF = (id) => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const inv = invoices.find(x => x.id === id);
-        const t = tenants.find(x => x.id === inv.tenantId);
-        const total = Number(inv.rent)+Number(inv.elec)+Number(inv.gas)+Number(inv.maint)+Number(inv.arr)+Number(inv.oth);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "mm", "a4");
 
-        // Styling
-        doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 45, 'F');
-        doc.setTextColor(255); doc.setFontSize(22); doc.setFont("helvetica", "bold");
-        doc.text("Upright Smart Solution", 105, 20, {align:"center"});
-        doc.setFontSize(12); doc.text("PROPERTY MONTHLY STATEMENT", 105, 30, {align:"center"});
-        doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        doc.text(`Receipt No: USS-${inv.id} | ${getMonthName(inv.month)}`, 105, 38, {align:"center"});
+    // Load Canva PDF as background
+    doc.addFileToVFS("invoice-template.pdf", INVOICE_TEMPLATE_BASE64);
+    doc.addPage();
+    doc.setPage(1);
 
-        doc.setTextColor(0); let y = 60;
-        doc.setFont("helvetica", "bold"); doc.text("Tenant's Name:", 20, y);
-        doc.setFont("helvetica", "normal"); doc.text(t.name, 55, y);
-        doc.setFont("helvetica", "bold"); doc.text("Premises On Rent:", 110, y);
-        doc.setFont("helvetica", "normal"); doc.text(t.unit, 155, y);
-        
-        y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("Phone Number:", 20, y);
-        doc.setFont("helvetica", "normal"); doc.text(t.phone || "N/A", 55, y);
-        doc.setFont("helvetica", "bold"); doc.text("Surety Deposit:", 110, y);
-        doc.setFont("helvetica", "normal"); doc.text(fmt(t.dep), 155, y);
+    const inv = invoices.find(x => x.id === id);
+    const t = tenants.find(x => x.id === inv.tenantId);
 
-        y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("CNIC:", 20, y);
-        doc.setFont("helvetica", "normal"); doc.text(t.cnic || "N/A", 55, y);
-        doc.setFont("helvetica", "bold"); doc.text("Monthly Rent:", 110, y);
-        doc.setFont("helvetica", "normal"); doc.text(fmt(t.fixedRent), 155, y);
+    const total =
+        Number(inv.rent) +
+        Number(inv.elec) +
+        Number(inv.gas) +
+        Number(inv.maint) +
+        Number(inv.arr) +
+        Number(inv.oth);
 
-        y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("Rented Since:", 20, y);
-        doc.setFont("helvetica", "normal"); doc.text(formatDate(t.since), 55, y);
-        doc.setFont("helvetica", "bold"); doc.text("Electricity A/C No:", 110, y);
-        doc.setFont("helvetica", "normal"); doc.text(t.elec || "N/A", 155, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(0);
 
-        y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("Gas A/C No:", 110, y);
-        doc.setFont("helvetica", "normal"); doc.text(t.gas || "N/A", 155, y);
+    /* =====================
+       POSITION MAPPING
+       (YOU ADJUST NUMBERS)
+       ===================== */
 
-        doc.autoTable({
-            startY: y + 15,
-            head: [['Description', 'Amount (PKR)']],
-            body: [
-                ['Monthly Rent', fmt(inv.rent)], ['Electricity Bill', fmt(inv.elec)],
-                ['Gas Bill', fmt(inv.gas)], ['Maintenance / Repairing', fmt(inv.maint)],
-                ['Previous Arrears', fmt(inv.arr)], ['Other Charges', fmt(inv.oth)],
-                [{content: 'Total Amount to Pay', styles: {fillColor: [255, 255, 0], fontStyle:'bold'}}, 
-                 {content: fmt(total), styles: {fillColor: [255, 255, 0], fontStyle:'bold'}}]
-            ],
-            theme: 'grid', headStyles: {fillColor: [15, 23, 42]}
-        });
+    // Tenant info
+    doc.text(t.name, 40, 70);
+    doc.text(t.phone || "N/A", 40, 78);
+    doc.text(t.cnic || "N/A", 40, 86);
+    doc.text(t.unit, 40, 94);
 
-        y = doc.lastAutoTable.finalY + 15;
-        doc.setFont("helvetica", "bold"); doc.text("Status: " + inv.status, 20, y);
-        y += 30;
-        doc.text("________________", 25, y); doc.text("Signature Landlord", 25, y+5);
-        doc.text("________________", 140, y); doc.text("Signature Tenant", 140, y+5);
-        
-        const blob = doc.output('blob');
-        const fileName = `Invoice_${t.name}_${inv.month}.pdf`;
-        shareFile = new File([blob], fileName, {type:'application/pdf'});
-        doc.save(fileName);
+    // Accounts
+    doc.text(t.elec || "N/A", 150, 70);
+    doc.text(t.gas || "N/A", 150, 78);
+    doc.text(formatDate(t.since), 150, 86);
+
+    // Charges
+    doc.text(fmt(inv.rent), 170, 115, { align: "right" });
+    doc.text(fmt(inv.elec), 170, 123, { align: "right" });
+    doc.text(fmt(inv.gas), 170, 131, { align: "right" });
+    doc.text(fmt(inv.maint), 170, 139, { align: "right" });
+    doc.text(fmt(inv.arr), 170, 147, { align: "right" });
+    doc.text(fmt(inv.oth), 170, 155, { align: "right" });
+
+    // Total
+    doc.setFontSize(12);
+    doc.text(fmt(total), 170, 170, { align: "right" });
+
+    // Status
+    doc.setFontSize(10);
+    doc.text(inv.status, 40, 170);
+
+    const blob = doc.output("blob");
+    const fileName = `Invoice_${t.name}_${inv.month}.pdf`;
+    shareFile = new File([blob], fileName, { type: "application/pdf" });
+
+    doc.save(fileName);
+    document.getElementById("waBtn").style.display = "flex";
+};
         
         // Show WhatsApp button
         document.getElementById("waBtn").style.display = "flex";
@@ -369,6 +366,12 @@
     window.delTenant = (id) => { if(confirm("Delete?")) { tenants = tenants.filter(t => t.id !== id); localStorage.setItem("uss_tenants", JSON.stringify(tenants)); refreshRentUI(); } };
 
     refreshRentUI(); renderInsTable();
+    <script>
+const INVOICE_TEMPLATE_BASE64 = `
+JVBERi0xLjQKJcfs...YOUR_BASE64_HERE...
+`;
+</script>
 </script>
 </body>
+
 </html>
