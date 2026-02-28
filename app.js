@@ -140,7 +140,7 @@ doc.setTextColor(0, 0, 0); // Reset to black
         y = 62;
         doc.setFont("helvetica", "bold"); doc.text("Rented Property Details", rightX, y);
         y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("Premises On /Unit No:", rightX, y);
+        doc.setFont("helvetica", "bold"); doc.text("Premises on rented:", rightX, y);
         doc.setFont("helvetica", "normal"); doc.text(t.unit, rightX + 45, y);
         y += 8;
         doc.setFont("helvetica", "bold"); doc.text("Surety Deposit:", rightX, y);
