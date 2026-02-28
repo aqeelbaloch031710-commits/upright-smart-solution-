@@ -27,9 +27,8 @@
         button { padding: 0.9rem; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; color: white; }
         .btn-primary { background: var(--primary); width: 100%; }
         .btn-success { background: var(--success); width: 100%; }
-        .btn-danger { background: var(--danger); }
         .btn-wa { background: #25D366; width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-sm { padding: 5px 10px; font-size: 0.75rem; background: #f1f5f9; color: var(--primary); border: 1px solid #ddd; border-radius: 4px; }
+        .btn-sm { padding: 5px 10px; font-size: 0.75rem; background: #f1f5f9; color: var(--primary); border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { text-align: left; padding: 1rem; border-bottom: 1px solid #f1f5f9; }
         th { background: #f8fafc; color: #64748b; }
@@ -183,7 +182,7 @@
         document.getElementById("tenantBody").innerHTML = tenants.map(t => `
             <tr><td>${t.name}</td><td>${t.unit}</td>
             <td><button class="btn-sm" onclick="loadTenant(${t.id})">Bill</button>
-            <button class="btn-sm btn-danger" style="color:white" onclick="delTenant(${t.id})">X</button></td></tr>`).join('');
+            <button class="btn-sm" style="background:#ef4444; color:white" onclick="delTenant(${t.id})">X</button></td></tr>`).join('');
     }
 
     window.saveTenant = () => {
@@ -236,7 +235,6 @@
             const pdfDoc = await PDFDocument.load(existingPdfBytes);
             const firstPage = pdfDoc.getPages()[0];
 
-            // Helper function to draw text. Y is distance from BOTTOM.
             const draw = (text, x, y, size = 10) => {
                 firstPage.drawText(String(text || "N/A"), { x, y, size, color: rgb(0, 0, 0) });
             };
@@ -245,21 +243,21 @@
             draw(`USS-${inv.id}`, 465, 715);      
             draw(getMonthName(inv.month), 465, 700); 
 
-            // 2. TENANT DATA (Fixed spacing to prevent overlap)
-            // Left Column
-            draw(t.name, 110, 658);                // Tenant Name Box
-            draw(t.phone, 110, 634);               // Phone Box
-            draw(t.cnic, 110, 610);                // CNIC Box
-            draw(formatDate(t.since), 110, 586);   // Since Box
+            // 2. TENANT DATA (Recalibrated for Alignment)
+            // Left Column (Name, Phone, CNIC, Date)
+            draw(t.name, 110, 658);                
+            draw(t.phone, 110, 634);               
+            draw(t.cnic, 110, 610);                
+            draw(formatDate(t.since), 110, 586);   
 
-            // Right Column
-            draw(t.unit, 420, 658);                // Premises Box
-            draw(fmt(t.dep), 420, 634);            // Deposit Box
-            draw(fmt(t.fixedRent), 420, 610);      // Fixed Rent Box
-            draw(t.elec, 420, 586);                // Elec A/C Box
-            draw(t.gas, 420, 562);                 // Gas A/C Box
+            // Right Column (Unit, Deposit, Rent, A/C Nos)
+            draw(t.unit, 420, 658);                
+            draw(fmt(t.dep), 420, 634);            
+            draw(fmt(t.fixedRent), 420, 610);      
+            draw(t.elec, 420, 586);                
+            draw(t.gas, 420, 562);                 
 
-            // 3. TABLE DATA (Right-aligned values)
+            // 3. TABLE DATA (Right-aligned values in Amount column)
             const tableX = 485; 
             draw(fmt(inv.rent), tableX, 510);      
             draw(fmt(inv.elec), tableX, 490);      
@@ -268,9 +266,9 @@
             draw(fmt(inv.arr), tableX, 430);       
             draw(fmt(inv.oth), tableX, 410);       
             
-            // 4. TOTAL & STATUS
-            draw(fmt(total), tableX, 370, 12);     // Grand Total
-            draw(inv.status, 110, 370, 12);        // Status Text
+            // 4. TOTAL & STATUS (Bottom Summary)
+            draw(fmt(total), tableX, 370, 12);     
+            draw(inv.status, 110, 370, 12);        
 
             const pdfBytes = await pdfDoc.save();
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -285,7 +283,7 @@
 
         } catch (err) {
             console.error(err);
-            alert("Ensure 'template.pdf' is in the same folder as this index.html file.");
+            alert("Please ensure your Canva file is named 'template.pdf' and is in the same folder.");
         }
     }
 
