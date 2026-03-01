@@ -24,7 +24,8 @@
         .panel { background: var(--panel); padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
         .input-group label { font-size: 0.75rem; font-weight: bold; color: #64748b; margin-bottom: 4px; display: block; }
         input, select, textarea { padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; font-size: 0.9rem; margin-bottom: 10px; }
-        textarea { resize: vertical; min-height: 60px; }
+        /* Light Red Highlight for Remarks */
+        #bNote { background-color: #fff1f1; border: 1px solid #fecaca; resize: vertical; min-height: 60px; }
         button { padding: 0.9rem; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; color: white; }
         .btn-primary { background: var(--primary); width: 100%; }
         .btn-success { background: var(--success); width: 100%; }
@@ -47,7 +48,7 @@
     <h1>Upright Smart Solution</h1>
     <h3>Tenancy Management System</h3>
     <div class="nav-tabs">
-        <button class="tab-btn active" onclick="showTab('rentView')">Property Management</button>
+        <button class="tab-btn active" onclick="showTab('rentView')">Tenancy Management</button>
         <button class="tab-btn" onclick="showTab('insView')">Installment System</button>
     </div>
 </header>
@@ -62,7 +63,7 @@
         </div>
 
         <section class="panel">
-            <h2 id="formTitle">1. Register New Tenant</h2>
+            <h2 id="regTitle">1. Register New Tenant</h2>
             <input type="hidden" id="editTenantId">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <div class="details-column">
@@ -98,7 +99,7 @@
                 </table>
             </section>
             <section class="panel">
-                <h3>Billing: <span id="activeName" style="color:var(--accent)">Select Tenant</span></h3>
+                <h3>Billing: <span id="activeName" style="color:var(--accent)">Select Tenant</span> <small id="activeUnit" style="color:#64748b"></small></h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="input-group"><label>Month</label><input type="month" id="bMonth"></div>
                     <div class="input-group"><label>Rent</label><input type="number" id="bRent"></div>
@@ -125,7 +126,7 @@
                 </button>
                 <h4 style="margin-top:20px;">History</h4>
                 <table style="margin-top:10px;">
-                    <thead><tr><th>Month</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>Month</th><th>Total (PKR)</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody id="invoiceBody"></tbody>
                 </table>
             </section>
@@ -146,7 +147,7 @@
         <section class="panel">
             <h3>Accounts</h3>
             <table id="customerTable">
-                <thead><tr><th>Customer</th><th>Product</th><th>Remaining</th><th>Action</th></tr></thead>
+                <thead><tr><th>Customer</th><th>Product</th><th>Remaining (PKR)</th><th>Action</th></tr></thead>
                 <tbody id="customerTableBody"></tbody>
             </table>
         </section>
@@ -166,7 +167,7 @@
             </div>
         </div>
         <table>
-            <thead><tr><th>Date</th><th>Amount</th></tr></thead>
+            <thead><tr><th>Date</th><th>Amount (PKR)</th></tr></thead>
             <tbody id="historyTableBody"></tbody>
         </table>
     </div>
@@ -178,7 +179,7 @@
     let customers = JSON.parse(localStorage.getItem("upright_installments_v1")) || [];
     let activeID = null, currentCustIdx = null, shareFile = null;
 
-    const fmt = (v) => " " + Number(v || 0).toLocaleString();
+    const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
     const formatDate = (d) => d ? d.split("-").reverse().join("-") : "N/A";
     
     const getMonthName = (mStr) => {
@@ -207,7 +208,7 @@
 
         document.getElementById("tenantBody").innerHTML = tenants.map(t => `
             <tr><td>${t.name}</td><td>${t.unit}</td>
-            <td style="display:flex; gap:4px;">
+            <td style="display:flex; gap:5px;">
                 <button class="btn-sm" onclick="loadTenant(${t.id})">Bill</button>
                 <button class="btn-sm" style="background:#64748b; color:white;" onclick="editTenant(${t.id})">Edit</button>
                 <button class="btn-sm btn-danger" style="color:white" onclick="delTenant(${t.id})">X</button>
@@ -218,7 +219,7 @@
         ["tName", "tPhone", "tCnic", "tUnit", "tSince", "tDep", "tFixedRent", "tElec", "tGas", "editTenantId"].forEach(id => {
             document.getElementById(id).value = "";
         });
-        document.getElementById("formTitle").innerText = "1. Register New Tenant";
+        document.getElementById("regTitle").innerText = "1. Register New Tenant";
         document.getElementById("saveBtn").innerText = "Save Tenant";
     };
 
@@ -235,8 +236,8 @@
         document.getElementById("tElec").value = t.elec;
         document.getElementById("tGas").value = t.gas;
         document.getElementById("editTenantId").value = t.id;
-        document.getElementById("formTitle").innerText = "Edit Tenant: " + t.name;
-        document.getElementById("saveBtn").innerText = "Update Tenant";
+        document.getElementById("regTitle").innerText = "Update Tenant: " + t.name;
+        document.getElementById("saveBtn").innerText = "Apply Changes";
         window.scrollTo(0,0);
     };
 
@@ -282,6 +283,8 @@
         activeID = id;
         const t = tenants.find(x => x.id === id);
         document.getElementById("activeName").innerText = t.name;
+        // Show Premises in Billing section
+        document.getElementById("activeUnit").innerText = `(${t.unit})`;
         document.getElementById("bRent").value = t.fixedRent;
         document.getElementById("bNote").value = "";
         const arrears = invoices.filter(i => i.tenantId === id && i.status !== "PAID")
@@ -293,18 +296,13 @@
     window.generateInvoice = () => {
         if(!activeID) return alert("Please select a tenant from the list first!");
         const inv = {
-            id: Date.now(), 
-            tenantId: activeID, 
-            month: document.getElementById("bMonth").value,
-            rent: document.getElementById("bRent").value || 0, 
-            elec: document.getElementById("bElec").value || 0,
-            gas: document.getElementById("bGas").value || 0, 
-            maint: document.getElementById("bMaint").value || 0,
-            arr: document.getElementById("bArr").value || 0, 
-            oth: document.getElementById("bOth").value || 0,
+            id: Date.now(), tenantId: activeID, month: document.getElementById("bMonth").value,
+            rent: document.getElementById("bRent").value || 0, elec: document.getElementById("bElec").value || 0,
+            gas: document.getElementById("bGas").value || 0, maint: document.getElementById("bMaint").value || 0,
+            arr: document.getElementById("bArr").value || 0, oth: document.getElementById("bOth").value || 0,
             status: document.getElementById("bStatus").value,
             note: document.getElementById("bNote").value,
-            date: new Date().toLocaleDateString('en-GB')
+            issueDate: new Date().toLocaleDateString('en-GB')
         };
         invoices.push(inv);
         localStorage.setItem("uss_invoices", JSON.stringify(invoices));
@@ -320,9 +318,8 @@
         if(!inv) return;
         const t = tenants.find(x => x.id === inv.tenantId);
         
-        // Calculate Sequential Receipt No
         const tenantInvoices = invoices.filter(i => i.tenantId === inv.tenantId).sort((a,b) => a.id - b.id);
-        const seqNo = tenantInvoices.findIndex(i => i.id === inv.id) + 1;
+        const receiptIndex = tenantInvoices.findIndex(i => i.id === inv.id) + 1;
 
         const total = Number(inv.rent) + Number(inv.elec) + Number(inv.gas) + Number(inv.maint) + Number(inv.arr) + Number(inv.oth);
 
@@ -332,10 +329,9 @@
         doc.setFontSize(14); doc.text("PROPERTY MONTHLY STATEMENT", 105, 28, {align: "center"}); 
         doc.setFontSize(10); doc.setFont("helvetica", "normal");
         
-        // UPDATED: Formats and added Issue Date
-        doc.text(`Receipt No: USS-${seqNo}`, 20, 38);
+        doc.text(`Receipt No: USS-${receiptIndex}`, 20, 38);
         doc.text(`Billing Month: ${getMonthName(inv.month)}`, 140, 38);
-        doc.text(`Issue Date: ${inv.date || new Date().toLocaleDateString('en-GB')}`, 140, 42);
+        doc.text(`Issue Date: ${inv.issueDate || new Date().toLocaleDateString('en-GB')}`, 140, 42);
 
         doc.setTextColor(0); let y = 60;
         doc.setFontSize(10);
@@ -368,7 +364,7 @@
 
         doc.autoTable({
             startY: y + 10,
-            head: [['Description', 'Amount ()']], 
+            head: [['Description', 'Amount (PKR)']], 
             body: [
                 ['Monthly Rent', fmt(inv.rent)], 
                 ['Electricity Bill', fmt(inv.elec)], 
@@ -412,6 +408,25 @@
         document.getElementById("waBtn").style.display = "flex";
     };
 
+    // Fix WhatsApp Sharing Logic
+    window.shareToWhatsApp = async () => {
+        if (!shareFile) return alert("Please generate a PDF first.");
+        
+        if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+            try {
+                await navigator.share({
+                    files: [shareFile],
+                    title: 'Monthly Statement',
+                    text: 'Here is your monthly property statement from Upright Smart Solution.'
+                });
+            } catch (err) {
+                alert("Sharing failed. Please download the PDF and send manually.");
+            }
+        } else {
+            alert("File sharing is not supported on this browser. Please download the PDF manually.");
+        }
+    };
+
     window.renderInvoiceHistory = (tid) => {
         document.getElementById("invoiceBody").innerHTML = invoices
             .filter(i => i.tenantId === tid)
@@ -420,7 +435,7 @@
                 return `
                 <tr>
                     <td>${getMonthName(i.month)}</td>
-                    <td>${fmt(total)}</td>
+                    <td>${fmt(total).replace("PKR ", "")}</td>
                     <td class="status-${i.status}">${i.status}</td>
                     <td style="display: flex; gap: 5px;">
                         <button class="btn-sm" onclick="createPDF(${i.id})">PDF</button>
@@ -456,7 +471,7 @@
 
     window.renderInsTable = () => {
         document.getElementById("customerTableBody").innerHTML = customers.map((c, i) => `
-            <tr><td>${c.name}</td><td>${c.product}</td><td>${fmt(c.remaining)}</td>
+            <tr><td>${c.name}</td><td>${c.product}</td><td>${fmt(c.remaining).replace("PKR ","")}</td>
             <td><button class="btn-sm" onclick="openInsModal(${i})">Manage</button></td></tr>`).join('');
     };
 
@@ -478,7 +493,7 @@
 
     window.renderInsHistory = () => {
         document.getElementById("historyTableBody").innerHTML = customers[currentCustIdx].payments.map(p => `
-            <tr><td>${p.date}</td><td>${fmt(p.amount)}</td></tr>`).join('');
+            <tr><td>${p.date}</td><td>${fmt(p.amount).replace("PKR ","")}</td></tr>`).join('');
     };
 
     window.closeModal = () => document.getElementById("insModal").style.display = "none";
@@ -488,4 +503,3 @@
 </script>
 </body>
 </html>
-
