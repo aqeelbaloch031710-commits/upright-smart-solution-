@@ -45,7 +45,7 @@
 
 <header>
     <h1>Upright Smart Solution</h1>
-     <h3>Tenancy Management System</h3>
+    <h3>Tenancy Management System</h3>
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="showTab('rentView')">Property Management</button>
         <button class="tab-btn" onclick="showTab('insView')">Installment System</button>
@@ -62,7 +62,8 @@
         </div>
 
         <section class="panel">
-            <h2>1. Register New Tenant</h2>
+            <h2 id="formTitle">1. Register New Tenant</h2>
+            <input type="hidden" id="editTenantId">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <div class="details-column">
                     <h4 style="color: var(--accent); margin-bottom:10px;">👤 Personal Details</h4>
@@ -83,7 +84,7 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button class="btn-primary" onclick="saveTenant()" style="flex:3;">Save Tenant</button>
+                <button id="saveBtn" class="btn-primary" onclick="saveTenant()" style="flex:3;">Save Tenant</button>
                 <button onclick="clearTenantForm()" style="flex:1; background:#64748b;">Clear</button>
             </div>
         </section>
@@ -172,23 +173,20 @@
 </div>
 
 <script>
-    // Initialize Data
     let tenants = JSON.parse(localStorage.getItem("uss_tenants")) || [];
     let invoices = JSON.parse(localStorage.getItem("uss_invoices")) || [];
     let customers = JSON.parse(localStorage.getItem("upright_installments_v1")) || [];
     let activeID = null, currentCustIdx = null, shareFile = null;
 
-    // Helper Functions
     const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
     const formatDate = (d) => d ? d.split("-").reverse().join("-") : "N/A";
     
     const getMonthName = (mStr) => {
         if(!mStr) return "N/A";
         const d = new Date(mStr + "-01");
-        return `Bill of ${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`;
+        return `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`;
     };
 
-    // Tab Navigation
     window.showTab = (id) => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -196,7 +194,6 @@
         if (event) event.currentTarget.classList.add('active');
     };
 
-    // UI Refresh
     window.refreshRentUI = () => {
         document.getElementById("statTenants").innerText = tenants.length;
         document.getElementById("statRent").innerText = fmt(tenants.reduce((s, t) => s + Number(t.fixedRent), 0));
@@ -210,20 +207,43 @@
 
         document.getElementById("tenantBody").innerHTML = tenants.map(t => `
             <tr><td>${t.name}</td><td>${t.unit}</td>
-            <td><button class="btn-sm" onclick="loadTenant(${t.id})">Bill</button>
-            <button class="btn-sm btn-danger" style="color:white" onclick="delTenant(${t.id})">X</button></td></tr>`).join('');
+            <td style="display:flex; gap:4px;">
+                <button class="btn-sm" onclick="loadTenant(${t.id})">Bill</button>
+                <button class="btn-sm" style="background:#64748b; color:white;" onclick="editTenant(${t.id})">Edit</button>
+                <button class="btn-sm btn-danger" style="color:white" onclick="delTenant(${t.id})">X</button>
+            </td></tr>`).join('');
     };
 
-    // Tenant Management
     window.clearTenantForm = () => {
-        ["tName", "tPhone", "tCnic", "tUnit", "tSince", "tDep", "tFixedRent", "tElec", "tGas"].forEach(id => {
+        ["tName", "tPhone", "tCnic", "tUnit", "tSince", "tDep", "tFixedRent", "tElec", "tGas", "editTenantId"].forEach(id => {
             document.getElementById(id).value = "";
         });
+        document.getElementById("formTitle").innerText = "1. Register New Tenant";
+        document.getElementById("saveBtn").innerText = "Save Tenant";
+    };
+
+    window.editTenant = (id) => {
+        const t = tenants.find(x => x.id === id);
+        if(!t) return;
+        document.getElementById("tName").value = t.name;
+        document.getElementById("tPhone").value = t.phone;
+        document.getElementById("tCnic").value = t.cnic;
+        document.getElementById("tUnit").value = t.unit;
+        document.getElementById("tSince").value = t.since;
+        document.getElementById("tDep").value = t.dep;
+        document.getElementById("tFixedRent").value = t.fixedRent;
+        document.getElementById("tElec").value = t.elec;
+        document.getElementById("tGas").value = t.gas;
+        document.getElementById("editTenantId").value = t.id;
+        document.getElementById("formTitle").innerText = "Edit Tenant: " + t.name;
+        document.getElementById("saveBtn").innerText = "Update Tenant";
+        window.scrollTo(0,0);
     };
 
     window.saveTenant = () => {
+        const editId = document.getElementById("editTenantId").value;
         const t = {
-            id: Date.now(), 
+            id: editId ? Number(editId) : Date.now(), 
             name: document.getElementById("tName").value,
             phone: document.getElementById("tPhone").value, 
             cnic: document.getElementById("tCnic").value,
@@ -235,7 +255,14 @@
             gas: document.getElementById("tGas").value
         };
         if(!t.name || !t.unit) return alert("Please enter at least the Name and Unit!");
-        tenants.push(t);
+        
+        if(editId) {
+            const idx = tenants.findIndex(x => x.id === Number(editId));
+            tenants[idx] = t;
+        } else {
+            tenants.push(t);
+        }
+
         localStorage.setItem("uss_tenants", JSON.stringify(tenants));
         window.refreshRentUI(); 
         window.clearTenantForm();
@@ -251,7 +278,6 @@
         } 
     };
 
-    // Billing Logic
     window.loadTenant = (id) => {
         activeID = id;
         const t = tenants.find(x => x.id === id);
@@ -267,12 +293,18 @@
     window.generateInvoice = () => {
         if(!activeID) return alert("Please select a tenant from the list first!");
         const inv = {
-            id: Date.now(), tenantId: activeID, month: document.getElementById("bMonth").value,
-            rent: document.getElementById("bRent").value || 0, elec: document.getElementById("bElec").value || 0,
-            gas: document.getElementById("bGas").value || 0, maint: document.getElementById("bMaint").value || 0,
-            arr: document.getElementById("bArr").value || 0, oth: document.getElementById("bOth").value || 0,
+            id: Date.now(), 
+            tenantId: activeID, 
+            month: document.getElementById("bMonth").value,
+            rent: document.getElementById("bRent").value || 0, 
+            elec: document.getElementById("bElec").value || 0,
+            gas: document.getElementById("bGas").value || 0, 
+            maint: document.getElementById("bMaint").value || 0,
+            arr: document.getElementById("bArr").value || 0, 
+            oth: document.getElementById("bOth").value || 0,
             status: document.getElementById("bStatus").value,
-            note: document.getElementById("bNote").value
+            note: document.getElementById("bNote").value,
+            date: new Date().toLocaleDateString('en-GB')
         };
         invoices.push(inv);
         localStorage.setItem("uss_invoices", JSON.stringify(invoices));
@@ -281,25 +313,30 @@
         window.renderInvoiceHistory(activeID);
     };
 
-    // PDF Generation (Template Matching)
     window.createPDF = (id) => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const inv = invoices.find(x => x.id === id);
         if(!inv) return;
         const t = tenants.find(x => x.id === inv.tenantId);
+        
+        // Calculate Sequential Receipt No
+        const tenantInvoices = invoices.filter(i => i.tenantId === inv.tenantId).sort((a,b) => a.id - b.id);
+        const seqNo = tenantInvoices.findIndex(i => i.id === inv.id) + 1;
+
         const total = Number(inv.rent) + Number(inv.elec) + Number(inv.gas) + Number(inv.maint) + Number(inv.arr) + Number(inv.oth);
 
-        // Header
         doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 45, 'F');
         doc.setTextColor(255); doc.setFontSize(22); doc.setFont("helvetica", "bold");
         doc.text("Upright Smart Solution", 105, 18, {align: "center"}); 
         doc.setFontSize(14); doc.text("PROPERTY MONTHLY STATEMENT", 105, 28, {align: "center"}); 
         doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        doc.text(`Receipt No: USS-${inv.id}`, 20, 38);
-        doc.text(`Billing Period: ${getMonthName(inv.month)}`, 140, 38);
+        
+        // UPDATED: Formats and added Issue Date
+        doc.text(`Receipt No: USS-${seqNo}`, 20, 38);
+        doc.text(`Billing Month: ${getMonthName(inv.month)}`, 140, 38);
+        doc.text(`Issue Date: ${inv.date || new Date().toLocaleDateString('en-GB')}`, 140, 42);
 
-        // Details
         doc.setTextColor(0); let y = 60;
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold"); doc.text("Tenant's Name:", 20, y); 
@@ -329,7 +366,6 @@
         doc.setFont("helvetica", "bold"); doc.text("Gas A/C No:", 110, y); 
         doc.setFont("helvetica", "normal"); doc.text(t.gas || "N/A", 150, y);
 
-        // Table
         doc.autoTable({
             startY: y + 10,
             head: [['Description', 'Amount (PKR)']], 
@@ -351,7 +387,6 @@
 
         y = doc.lastAutoTable.finalY + 10;
         
-        // Notes Section
         if (inv.note) {
             doc.setFont("helvetica", "bold");
             doc.text("Remarks / Notes:", 20, y);
@@ -361,14 +396,12 @@
             y += (splitNote.length * 6) + 10;
         }
 
-        // Status & Signatures
         doc.setFont("helvetica", "bold"); 
         doc.text("Status: " + (inv.status || "UNPAID"), 20, y); 
         y += 30;
         doc.text("________________", 20, y); doc.text("Signature Landlord", 20, y + 5); 
         doc.text("________________", 140, y); doc.text("Signature Tenant", 140, y + 5); 
 
-        // Footer
         doc.setFontSize(8); doc.setFont("helvetica", "italic");
         doc.text("This is a computer generated document and does not require a physical stamp.", 105, 285, {align: "center"}); 
 
@@ -386,19 +419,26 @@
                 const total = Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth);
                 return `
                 <tr>
-                    <td>${i.month}</td>
+                    <td>${getMonthName(i.month)}</td>
                     <td>${fmt(total)}</td>
                     <td class="status-${i.status}">${i.status}</td>
                     <td style="display: flex; gap: 5px;">
                         <button class="btn-sm" onclick="createPDF(${i.id})">PDF</button>
-                        <button class="btn-sm" style="background:#64748b; color:white;" onclick="editInvoice(${i.id})">Edit</button>
-                        <button class="btn-sm btn-danger" style="color:white" onclick="delInvoice(${i.id})">Del</button>
+                        <button class="btn-sm btn-danger" style="color:white" onclick="delInvoice(${i.id})">X</button>
                     </td>
                 </tr>`;
             }).join('');
     };
 
-    // Customer / Installment Logic
+    window.delInvoice = (id) => {
+        if(confirm("Delete this invoice?")){
+            invoices = invoices.filter(i => i.id !== id);
+            localStorage.setItem("uss_invoices", JSON.stringify(invoices));
+            window.refreshRentUI();
+            if(activeID) window.renderInvoiceHistory(activeID);
+        }
+    };
+
     window.addCustomer = () => {
         const c = { 
             name: document.getElementById("cName").value, 
@@ -443,10 +483,8 @@
 
     window.closeModal = () => document.getElementById("insModal").style.display = "none";
 
-    // Initial Load
     window.refreshRentUI(); 
     window.renderInsTable();
 </script>
 </body>
 </html>
-
