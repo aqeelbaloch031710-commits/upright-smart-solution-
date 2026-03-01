@@ -178,7 +178,7 @@
     let customers = JSON.parse(localStorage.getItem("upright_installments_v1")) || [];
     let activeID = null, currentCustIdx = null, shareFile = null;
 
-    const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
+    const fmt = (v) => " " + Number(v || 0).toLocaleString();
     const formatDate = (d) => d ? d.split("-").reverse().join("-") : "N/A";
     
     const getMonthName = (mStr) => {
@@ -368,7 +368,7 @@
 
         doc.autoTable({
             startY: y + 10,
-            head: [['Description', 'Amount (PKR)']], 
+            head: [['Description', 'Amount ()']], 
             body: [
                 ['Monthly Rent', fmt(inv.rent)], 
                 ['Electricity Bill', fmt(inv.elec)], 
@@ -488,3 +488,4 @@
 </script>
 </body>
 </html>
+
