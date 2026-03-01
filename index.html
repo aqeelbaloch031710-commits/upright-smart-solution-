@@ -23,7 +23,8 @@
         .stat-card strong { display: block; font-size: 1.3rem; color: var(--primary); margin-top: 5px; }
         .panel { background: var(--panel); padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
         .input-group label { font-size: 0.75rem; font-weight: bold; color: #64748b; margin-bottom: 4px; display: block; }
-        input, select { padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; font-size: 0.9rem; margin-bottom: 10px; }
+        input, select, textarea { padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; font-size: 0.9rem; margin-bottom: 10px; }
+        textarea { resize: vertical; min-height: 60px; }
         button { padding: 0.9rem; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; color: white; }
         .btn-primary { background: var(--primary); width: 100%; }
         .btn-success { background: var(--success); width: 100%; }
@@ -112,6 +113,10 @@
                             <option value="PARTIALLY-PAID">PARTIALLY PAID</option>
                         </select>
                     </div>
+                </div>
+                <div class="input-group">
+                    <label>Monthly Remarks / Notes (Visible on Invoice)</label>
+                    <textarea id="bNote" placeholder="e.g. Previous month balance adjusted..."></textarea>
                 </div>
                 <button class="btn-success" onclick="generateInvoice()">Create & Download PDF</button>
                 <button id="waBtn" class="btn-wa" onclick="shareToWhatsApp()" style="display:none;">
@@ -228,115 +233,126 @@
         const t = tenants.find(x => x.id === id);
         document.getElementById("activeName").innerText = t.name;
         document.getElementById("bRent").value = t.fixedRent;
+        document.getElementById("bNote").value = "";
         const arrears = invoices.filter(i => i.tenantId === id && i.status !== "PAID")
             .reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth)), 0);
         document.getElementById("bArr").value = arrears;
         renderInvoiceHistory(id);
     };
 
-   window.createPDF = (id) => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const inv = invoices.find(x => x.id === id);
-    if(!inv) return;
-    const t = tenants.find(x => x.id === inv.tenantId);
-    const total = Number(inv.rent) + Number(inv.elec) + Number(inv.gas) + Number(inv.maint) + Number(inv.arr) + Number(inv.oth);
+    window.generateInvoice = () => {
+        if(!activeID) return alert("Select tenant!");
+        const inv = {
+            id: Date.now(), tenantId: activeID, month: document.getElementById("bMonth").value,
+            rent: document.getElementById("bRent").value || 0, elec: document.getElementById("bElec").value || 0,
+            gas: document.getElementById("bGas").value || 0, maint: document.getElementById("bMaint").value || 0,
+            arr: document.getElementById("bArr").value || 0, oth: document.getElementById("bOth").value || 0,
+            status: document.getElementById("bStatus").value,
+            note: document.getElementById("bNote").value
+        };
+        invoices.push(inv);
+        localStorage.setItem("uss_invoices", JSON.stringify(invoices));
+        createPDF(inv.id); refreshRentUI(); renderInvoiceHistory(activeID);
+    };
 
-    // --- Header (Source 1, 2) ---
-    doc.setFillColor(15, 23, 42); 
-    doc.rect(0, 0, 210, 45, 'F');
-    
-    doc.setTextColor(255); 
-    doc.setFontSize(22); 
-    doc.setFont("helvetica", "bold");
-    doc.text("Upright Smart Solution", 105, 18, {align: "center"}); // [cite: 1]
-    
-    doc.setFontSize(14);
-    doc.text("PROPERTY MONTHLY STATEMENT", 105, 28, {align: "center"}); // [cite: 2]
-    
-    doc.setFontSize(10); 
-    doc.setFont("helvetica", "normal");
-    doc.text(`Receipt No: USS-${inv.id}`, 20, 38); // [cite: 3]
-    doc.text(`Billing Period: ${getMonthName(inv.month)}`, 140, 38); // [cite: 4]
+    window.createPDF = (id) => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const inv = invoices.find(x => x.id === id);
+        if(!inv) return;
+        const t = tenants.find(x => x.id === inv.tenantId);
+        const total = Number(inv.rent) + Number(inv.elec) + Number(inv.gas) + Number(inv.maint) + Number(inv.arr) + Number(inv.oth);
 
-    // --- Details Section (Source 5-13) ---
-    doc.setTextColor(0); 
-    let y = 60;
-    doc.setFontSize(10);
+        // Header Section [cite: 1, 2]
+        doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 45, 'F');
+        doc.setTextColor(255); doc.setFontSize(22); doc.setFont("helvetica", "bold");
+        doc.text("Upright Smart Solution", 105, 18, {align: "center"}); 
+        doc.setFontSize(14); doc.text("PROPERTY MONTHLY STATEMENT", 105, 28, {align: "center"}); 
+        doc.setFontSize(10); doc.setFont("helvetica", "normal");
+        doc.text(`Receipt No: USS-${inv.id}`, 20, 38); [cite: 3]
+        doc.text(`Billing Period: ${getMonthName(inv.month)}`, 140, 38); [cite: 4]
 
-    // Column 1: Tenant Info
-    doc.setFont("helvetica", "bold"); doc.text("Tenant's Name:", 20, y); // [cite: 5]
-    doc.setFont("helvetica", "normal"); doc.text(t.name, 60, y);
-    
-    doc.setFont("helvetica", "bold"); doc.text("Phone number:", 20, y + 8); // [cite: 6]
-    doc.setFont("helvetica", "normal"); doc.text(t.phone || "N/A", 60, y + 8);
-    
-    doc.setFont("helvetica", "bold"); doc.text("CNIC:", 20, y + 16); // [cite: 7]
-    doc.setFont("helvetica", "normal"); doc.text(t.cnic || "N/A", 60, y + 16);
+        // Detail Section [cite: 5-13]
+        doc.setTextColor(0); let y = 60;
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold"); doc.text("Tenant's Name:", 20, y); 
+        doc.setFont("helvetica", "normal"); doc.text(t.name, 60, y);
+        doc.setFont("helvetica", "bold"); doc.text("Premises On Rent:", 110, y); 
+        doc.setFont("helvetica", "normal"); doc.text(t.unit, 150, y);
+        
+        y += 8;
+        doc.setFont("helvetica", "bold"); doc.text("Phone number:", 20, y); 
+        doc.setFont("helvetica", "normal"); doc.text(t.phone || "N/A", 60, y);
+        doc.setFont("helvetica", "bold"); doc.text("Surety deposit:", 110, y); 
+        doc.setFont("helvetica", "normal"); doc.text(fmt(t.dep), 150, y);
 
-    doc.setFont("helvetica", "bold"); doc.text("Rented Since:", 20, y + 24); // [cite: 13]
-    doc.setFont("helvetica", "normal"); doc.text(formatDate(t.since), 60, y + 24);
+        y += 8;
+        doc.setFont("helvetica", "bold"); doc.text("CNIC:", 20, y); 
+        doc.setFont("helvetica", "normal"); doc.text(t.cnic || "N/A", 60, y);
+        doc.setFont("helvetica", "bold"); doc.text("Monthly rent:", 110, y); 
+        doc.setFont("helvetica", "normal"); doc.text(fmt(t.fixedRent), 150, y);
 
-    // Column 2: Property Info
-    doc.setFont("helvetica", "bold"); doc.text("Premises On Rent:", 110, y); // [cite: 8]
-    doc.setFont("helvetica", "normal"); doc.text(t.unit, 150, y);
-    
-    doc.setFont("helvetica", "bold"); doc.text("Surety deposit:", 110, y + 8); // [cite: 9]
-    doc.setFont("helvetica", "normal"); doc.text(fmt(t.dep), 150, y + 8);
-    
-    doc.setFont("helvetica", "bold"); doc.text("Monthly rent:", 110, y + 16); // [cite: 10]
-    doc.setFont("helvetica", "normal"); doc.text(fmt(t.fixedRent), 150, y + 16);
-    
-    doc.setFont("helvetica", "bold"); doc.text("Electricity A/C No:", 110, y + 24); // [cite: 11]
-    doc.setFont("helvetica", "normal"); doc.text(t.elec || "N/A", 150, y + 24);
-    
-    doc.setFont("helvetica", "bold"); doc.text("Gas A/C No:", 110, y + 32); // [cite: 12]
-    doc.setFont("helvetica", "normal"); doc.text(t.gas || "N/A", 150, y + 32);
+        y += 8;
+        doc.setFont("helvetica", "bold"); doc.text("Rented Since:", 20, y); 
+        doc.setFont("helvetica", "normal"); doc.text(formatDate(t.since), 60, y);
+        doc.setFont("helvetica", "bold"); doc.text("Electricity A/C No:", 110, y); 
+        doc.setFont("helvetica", "normal"); doc.text(t.elec || "N/A", 150, y);
 
-    // --- Billing Table (Source 14-20, 25, 26) ---
-    doc.autoTable({
-        startY: y + 42,
-        head: [['Description', 'Amount (PKR)']], // [cite: 25, 26]
-        body: [
-            ['Monthly Rent', fmt(inv.rent)], // [cite: 14]
-            ['Electricity Bill', fmt(inv.elec)], // [cite: 15]
-            ['Gas Bill', fmt(inv.gas)], // [cite: 16]
-            ['Maintenance/Service Fee', fmt(inv.maint)], // [cite: 19]
-            ['Arrears', fmt(inv.arr)], // [cite: 18]
-            ['Other Charges', fmt(inv.oth)], // [cite: 17]
-            [{content: 'Total Amount to Pay', styles: {fillColor: [240, 240, 240], fontStyle: 'bold'}}, 
-             {content: fmt(total), styles: {fillColor: [240, 240, 240], fontStyle: 'bold'}}] // [cite: 20]
-        ],
-        theme: 'grid',
-        headStyles: {fillColor: [15, 23, 42], halign: 'left'},
-        columnStyles: { 1: { halign: 'right' } },
-        margin: { left: 20, right: 20 }
-    });
+        y += 8;
+        doc.setFont("helvetica", "bold"); doc.text("Gas A/C No:", 110, y); 
+        doc.setFont("helvetica", "normal"); doc.text(t.gas || "N/A", 150, y);
 
-    // --- Status and Signatures (Source 21, 22, 27) ---
-    y = doc.lastAutoTable.finalY + 15;
-    doc.setFont("helvetica", "bold"); 
-    doc.text("Status: " + (inv.status || "UNPAID"), 20, y); // [cite: 21, 29]
-    
-    y += 35;
-    doc.text("________________", 20, y); 
-    doc.text("Signature Landlord", 20, y + 5); // [cite: 22]
-    
-    doc.text("________________", 140, y); 
-    doc.text("Signature Tenant", 140, y + 5); // [cite: 27]
+        // Billing Table [cite: 14-20, 25, 26]
+        doc.autoTable({
+            startY: y + 10,
+            head: [['Description', 'Amount (PKR)']], 
+            body: [
+                ['Monthly Rent', fmt(inv.rent)], 
+                ['Electricity Bill', fmt(inv.elec)], 
+                ['Gas Bill', fmt(inv.gas)], 
+                ['Maintenance/Service Fee', fmt(inv.maint)], 
+                ['Arrears', fmt(inv.arr)], 
+                ['Other Charges', fmt(inv.oth)], 
+                [{content: 'Total Amount to Pay', styles: {fillColor: [240, 240, 240], fontStyle: 'bold'}}, 
+                 {content: fmt(total), styles: {fillColor: [240, 240, 240], fontStyle: 'bold'}}] 
+            ],
+            theme: 'grid',
+            headStyles: {fillColor: [15, 23, 42], halign: 'left'},
+            columnStyles: { 1: { halign: 'right' } },
+            margin: { left: 20, right: 20 }
+        });
 
-    // --- Footer Disclaimer (Source 28) ---
-    y += 25;
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "italic");
-    doc.text("This is a computer generated document and does not require a physical stamp.", 105, y, {align: "center"}); // [cite: 28]
+        y = doc.lastAutoTable.finalY + 10;
+        
+        // REMARKS NOTE SECTION
+        if (inv.note) {
+            doc.setFont("helvetica", "bold");
+            doc.text("Remarks / Notes:", 20, y);
+            doc.setFont("helvetica", "normal");
+            const splitNote = doc.splitTextToSize(inv.note, 170);
+            doc.text(splitNote, 20, y + 6);
+            y += (splitNote.length * 6) + 10;
+        }
 
-    const blob = doc.output('blob');
-    const fileName = `Invoice_${t.name}_${inv.month}.pdf`;
-    shareFile = new File([blob], fileName, {type: 'application/pdf'});
-    doc.save(fileName);
-    document.getElementById("waBtn").style.display = "flex";
-};
+        // Status & Signatures [cite: 21, 22, 27]
+        doc.setFont("helvetica", "bold"); 
+        doc.text("Status: " + (inv.status || "UNPAID"), 20, y); 
+        
+        y += 30;
+        doc.text("________________", 20, y); doc.text("Signature Landlord", 20, y + 5); 
+        doc.text("________________", 140, y); doc.text("Signature Tenant", 140, y + 5); 
+
+        // Footer Disclaimer [cite: 28]
+        y += 20;
+        doc.setFontSize(8); doc.setFont("helvetica", "italic");
+        doc.text("This is a computer generated document and does not require a physical stamp.", 105, y, {align: "center"}); 
+
+        const blob = doc.output('blob');
+        const fileName = `Invoice_${t.name}_${inv.month}.pdf`;
+        shareFile = new File([blob], fileName, {type: 'application/pdf'});
+        doc.save(fileName);
+        document.getElementById("waBtn").style.display = "flex";
+    };
 
     window.shareToWhatsApp = async () => {
         if (navigator.share && shareFile) {
@@ -352,7 +368,6 @@
         }
     };
 
-    // Invoice History Logic with Edit and Delete
     function renderInvoiceHistory(tid) {
         document.getElementById("invoiceBody").innerHTML = invoices
             .filter(i => i.tenantId === tid)
@@ -384,8 +399,6 @@
     window.editInvoice = (id) => {
         const inv = invoices.find(i => i.id === id);
         if(!inv) return;
-        
-        // Fill form
         document.getElementById("bMonth").value = inv.month;
         document.getElementById("bRent").value = inv.rent;
         document.getElementById("bElec").value = inv.elec;
@@ -394,13 +407,11 @@
         document.getElementById("bArr").value = inv.arr;
         document.getElementById("bOth").value = inv.oth;
         document.getElementById("bStatus").value = inv.status;
-
-        // Remove the existing one so "Create" saves the update
+        document.getElementById("bNote").value = inv.note || "";
         invoices = invoices.filter(i => i.id !== id);
         alert("Details loaded. Edit and click 'Create & Download PDF' to update.");
     };
 
-    // Installment Logic
     window.addCustomer = () => {
         const c = { name: document.getElementById("cName").value, product: document.getElementById("cProduct").value, totalPrice: Number(document.getElementById("cTotal").value), downPayment: Number(document.getElementById("cDown").value), remaining: Number(document.getElementById("cTotal").value) - Number(document.getElementById("cDown").value), payments: [] };
         if(!c.name) return alert("Enter Customer Name");
@@ -435,4 +446,3 @@
 </script>
 </body>
 </html>
-
