@@ -172,11 +172,13 @@
 </div>
 
 <script>
+    // Initialize Data
     let tenants = JSON.parse(localStorage.getItem("uss_tenants")) || [];
     let invoices = JSON.parse(localStorage.getItem("uss_invoices")) || [];
     let customers = JSON.parse(localStorage.getItem("upright_installments_v1")) || [];
     let activeID = null, currentCustIdx = null, shareFile = null;
 
+    // Helper Functions
     const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
     const formatDate = (d) => d ? d.split("-").reverse().join("-") : "N/A";
     
@@ -186,14 +188,16 @@
         return `Bill of ${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`;
     };
 
-    function showTab(id) {
+    // Tab Navigation
+    window.showTab = (id) => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        event.currentTarget.classList.add('active');
-    }
+        if (event) event.currentTarget.classList.add('active');
+    };
 
-    function refreshRentUI() {
+    // UI Refresh
+    window.refreshRentUI = () => {
         document.getElementById("statTenants").innerText = tenants.length;
         document.getElementById("statRent").innerText = fmt(tenants.reduce((s, t) => s + Number(t.fixedRent), 0));
         let paid = 0, unpaid = 0;
@@ -208,26 +212,46 @@
             <tr><td>${t.name}</td><td>${t.unit}</td>
             <td><button class="btn-sm" onclick="loadTenant(${t.id})">Bill</button>
             <button class="btn-sm btn-danger" style="color:white" onclick="delTenant(${t.id})">X</button></td></tr>`).join('');
-    }
+    };
 
+    // Tenant Management
     window.clearTenantForm = () => {
-        ["tName", "tPhone", "tCnic", "tUnit", "tSince", "tDep", "tFixedRent", "tElec", "tGas"].forEach(id => document.getElementById(id).value = "");
+        ["tName", "tPhone", "tCnic", "tUnit", "tSince", "tDep", "tFixedRent", "tElec", "tGas"].forEach(id => {
+            document.getElementById(id).value = "";
+        });
     };
 
     window.saveTenant = () => {
         const t = {
-            id: Date.now(), name: document.getElementById("tName").value,
-            phone: document.getElementById("tPhone").value, cnic: document.getElementById("tCnic").value,
-            unit: document.getElementById("tUnit").value, since: document.getElementById("tSince").value,
-            dep: document.getElementById("tDep").value, fixedRent: document.getElementById("tFixedRent").value,
-            elec: document.getElementById("tElec").value, gas: document.getElementById("tGas").value
+            id: Date.now(), 
+            name: document.getElementById("tName").value,
+            phone: document.getElementById("tPhone").value, 
+            cnic: document.getElementById("tCnic").value,
+            unit: document.getElementById("tUnit").value, 
+            since: document.getElementById("tSince").value,
+            dep: document.getElementById("tDep").value, 
+            fixedRent: document.getElementById("tFixedRent").value,
+            elec: document.getElementById("tElec").value, 
+            gas: document.getElementById("tGas").value
         };
-        if(!t.name || !t.unit) return alert("Missing details!");
+        if(!t.name || !t.unit) return alert("Please enter at least the Name and Unit!");
         tenants.push(t);
         localStorage.setItem("uss_tenants", JSON.stringify(tenants));
-        refreshRentUI(); clearTenantForm();
+        window.refreshRentUI(); 
+        window.clearTenantForm();
     };
 
+    window.delTenant = (id) => { 
+        if(confirm("Delete Tenant and all associated invoices?")) { 
+            tenants = tenants.filter(t => t.id !== id); 
+            invoices = invoices.filter(i => i.tenantId !== id); 
+            localStorage.setItem("uss_tenants", JSON.stringify(tenants)); 
+            localStorage.setItem("uss_invoices", JSON.stringify(invoices)); 
+            window.refreshRentUI(); 
+        } 
+    };
+
+    // Billing Logic
     window.loadTenant = (id) => {
         activeID = id;
         const t = tenants.find(x => x.id === id);
@@ -237,11 +261,11 @@
         const arrears = invoices.filter(i => i.tenantId === id && i.status !== "PAID")
             .reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth)), 0);
         document.getElementById("bArr").value = arrears;
-        renderInvoiceHistory(id);
+        window.renderInvoiceHistory(id);
     };
 
     window.generateInvoice = () => {
-        if(!activeID) return alert("Select tenant!");
+        if(!activeID) return alert("Please select a tenant from the list first!");
         const inv = {
             id: Date.now(), tenantId: activeID, month: document.getElementById("bMonth").value,
             rent: document.getElementById("bRent").value || 0, elec: document.getElementById("bElec").value || 0,
@@ -252,9 +276,12 @@
         };
         invoices.push(inv);
         localStorage.setItem("uss_invoices", JSON.stringify(invoices));
-        createPDF(inv.id); refreshRentUI(); renderInvoiceHistory(activeID);
+        window.createPDF(inv.id); 
+        window.refreshRentUI(); 
+        window.renderInvoiceHistory(activeID);
     };
 
+    // PDF Generation (Template Matching)
     window.createPDF = (id) => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
@@ -263,16 +290,16 @@
         const t = tenants.find(x => x.id === inv.tenantId);
         const total = Number(inv.rent) + Number(inv.elec) + Number(inv.gas) + Number(inv.maint) + Number(inv.arr) + Number(inv.oth);
 
-        // Header Section [cite: 1, 2]
+        // Header
         doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 45, 'F');
         doc.setTextColor(255); doc.setFontSize(22); doc.setFont("helvetica", "bold");
         doc.text("Upright Smart Solution", 105, 18, {align: "center"}); 
         doc.setFontSize(14); doc.text("PROPERTY MONTHLY STATEMENT", 105, 28, {align: "center"}); 
         doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        doc.text(`Receipt No: USS-${inv.id}`, 20, 38); [cite: 3]
-        doc.text(`Billing Period: ${getMonthName(inv.month)}`, 140, 38); [cite: 4]
+        doc.text(`Receipt No: USS-${inv.id}`, 20, 38);
+        doc.text(`Billing Period: ${getMonthName(inv.month)}`, 140, 38);
 
-        // Detail Section [cite: 5-13]
+        // Details
         doc.setTextColor(0); let y = 60;
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold"); doc.text("Tenant's Name:", 20, y); 
@@ -302,7 +329,7 @@
         doc.setFont("helvetica", "bold"); doc.text("Gas A/C No:", 110, y); 
         doc.setFont("helvetica", "normal"); doc.text(t.gas || "N/A", 150, y);
 
-        // Billing Table [cite: 14-20, 25, 26]
+        // Table
         doc.autoTable({
             startY: y + 10,
             head: [['Description', 'Amount (PKR)']], 
@@ -324,7 +351,7 @@
 
         y = doc.lastAutoTable.finalY + 10;
         
-        // REMARKS NOTE SECTION
+        // Notes Section
         if (inv.note) {
             doc.setFont("helvetica", "bold");
             doc.text("Remarks / Notes:", 20, y);
@@ -334,18 +361,16 @@
             y += (splitNote.length * 6) + 10;
         }
 
-        // Status & Signatures [cite: 21, 22, 27]
+        // Status & Signatures
         doc.setFont("helvetica", "bold"); 
         doc.text("Status: " + (inv.status || "UNPAID"), 20, y); 
-        
         y += 30;
         doc.text("________________", 20, y); doc.text("Signature Landlord", 20, y + 5); 
         doc.text("________________", 140, y); doc.text("Signature Tenant", 140, y + 5); 
 
-        // Footer Disclaimer [cite: 28]
-        y += 20;
+        // Footer
         doc.setFontSize(8); doc.setFont("helvetica", "italic");
-        doc.text("This is a computer generated document and does not require a physical stamp.", 105, y, {align: "center"}); 
+        doc.text("This is a computer generated document and does not require a physical stamp.", 105, 285, {align: "center"}); 
 
         const blob = doc.output('blob');
         const fileName = `Invoice_${t.name}_${inv.month}.pdf`;
@@ -354,21 +379,7 @@
         document.getElementById("waBtn").style.display = "flex";
     };
 
-    window.shareToWhatsApp = async () => {
-        if (navigator.share && shareFile) {
-            try {
-                await navigator.share({
-                    files: [shareFile],
-                    title: 'Invoice',
-                    text: 'Here is your monthly invoice from Upright Smart Solution.'
-                });
-            } catch (err) { console.log("Share failed", err); }
-        } else {
-            alert("Direct sharing not supported. Please send the downloaded file manually via WhatsApp.");
-        }
-    };
-
-    function renderInvoiceHistory(tid) {
+    window.renderInvoiceHistory = (tid) => {
         document.getElementById("invoiceBody").innerHTML = invoices
             .filter(i => i.tenantId === tid)
             .map(i => {
@@ -385,46 +396,35 @@
                     </td>
                 </tr>`;
             }).join('');
-    }
-
-    window.delInvoice = (id) => {
-        if(confirm("Delete this invoice record?")) {
-            invoices = invoices.filter(i => i.id !== id);
-            localStorage.setItem("uss_invoices", JSON.stringify(invoices));
-            refreshRentUI();
-            if(activeID) renderInvoiceHistory(activeID);
-        }
     };
 
-    window.editInvoice = (id) => {
-        const inv = invoices.find(i => i.id === id);
-        if(!inv) return;
-        document.getElementById("bMonth").value = inv.month;
-        document.getElementById("bRent").value = inv.rent;
-        document.getElementById("bElec").value = inv.elec;
-        document.getElementById("bGas").value = inv.gas;
-        document.getElementById("bMaint").value = inv.maint;
-        document.getElementById("bArr").value = inv.arr;
-        document.getElementById("bOth").value = inv.oth;
-        document.getElementById("bStatus").value = inv.status;
-        document.getElementById("bNote").value = inv.note || "";
-        invoices = invoices.filter(i => i.id !== id);
-        alert("Details loaded. Edit and click 'Create & Download PDF' to update.");
-    };
-
+    // Customer / Installment Logic
     window.addCustomer = () => {
-        const c = { name: document.getElementById("cName").value, product: document.getElementById("cProduct").value, totalPrice: Number(document.getElementById("cTotal").value), downPayment: Number(document.getElementById("cDown").value), remaining: Number(document.getElementById("cTotal").value) - Number(document.getElementById("cDown").value), payments: [] };
+        const c = { 
+            name: document.getElementById("cName").value, 
+            product: document.getElementById("cProduct").value, 
+            totalPrice: Number(document.getElementById("cTotal").value), 
+            downPayment: Number(document.getElementById("cDown").value), 
+            remaining: Number(document.getElementById("cTotal").value) - Number(document.getElementById("cDown").value), 
+            payments: [] 
+        };
         if(!c.name) return alert("Enter Customer Name");
-        customers.push(c); localStorage.setItem("upright_installments_v1", JSON.stringify(customers)); renderInsTable();
+        customers.push(c); 
+        localStorage.setItem("upright_installments_v1", JSON.stringify(customers)); 
+        window.renderInsTable();
     };
 
-    function renderInsTable() {
-        document.getElementById("customerTableBody").innerHTML = customers.map((c, i) => `<tr><td>${c.name}</td><td>${c.product}</td><td>${fmt(c.remaining)}</td><td><button class="btn-sm" onclick="openInsModal(${i})">Manage</button></td></tr>`).join('');
-    }
+    window.renderInsTable = () => {
+        document.getElementById("customerTableBody").innerHTML = customers.map((c, i) => `
+            <tr><td>${c.name}</td><td>${c.product}</td><td>${fmt(c.remaining)}</td>
+            <td><button class="btn-sm" onclick="openInsModal(${i})">Manage</button></td></tr>`).join('');
+    };
 
     window.openInsModal = (i) => {
-        currentCustIdx = i; document.getElementById("modalTitle").innerText = customers[i].name;
-        document.getElementById("insModal").style.display = "block"; renderInsHistory();
+        currentCustIdx = i; 
+        document.getElementById("modalTitle").innerText = customers[i].name;
+        document.getElementById("insModal").style.display = "block"; 
+        window.renderInsHistory();
     };
 
     window.addInstallment = () => {
@@ -432,17 +432,21 @@
         customers[currentCustIdx].payments.push({ date: document.getElementById("insDate").value, amount: amt });
         customers[currentCustIdx].remaining -= amt;
         localStorage.setItem("upright_installments_v1", JSON.stringify(customers));
-        renderInsHistory(); renderInsTable();
+        window.renderInsHistory(); 
+        window.renderInsTable();
     };
 
-    function renderInsHistory() {
-        document.getElementById("historyTableBody").innerHTML = customers[currentCustIdx].payments.map(p => `<tr><td>${p.date}</td><td>${fmt(p.amount)}</td></tr>`).join('');
-    }
+    window.renderInsHistory = () => {
+        document.getElementById("historyTableBody").innerHTML = customers[currentCustIdx].payments.map(p => `
+            <tr><td>${p.date}</td><td>${fmt(p.amount)}</td></tr>`).join('');
+    };
 
     window.closeModal = () => document.getElementById("insModal").style.display = "none";
-    window.delTenant = (id) => { if(confirm("Delete Tenant and all associated data?")) { tenants = tenants.filter(t => t.id !== id); invoices = invoices.filter(i => i.tenantId !== id); localStorage.setItem("uss_tenants", JSON.stringify(tenants)); localStorage.setItem("uss_invoices", JSON.stringify(invoices)); refreshRentUI(); } };
 
-    refreshRentUI(); renderInsTable();
+    // Initial Load
+    window.refreshRentUI(); 
+    window.renderInsTable();
 </script>
 </body>
 </html>
+
