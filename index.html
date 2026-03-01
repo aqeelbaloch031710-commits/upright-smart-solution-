@@ -234,7 +234,7 @@
         renderInvoiceHistory(id);
     };
 
-    window.createPDF = (id) => {
+   window.createPDF = (id) => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const inv = invoices.find(x => x.id === id);
@@ -242,97 +242,95 @@
     const t = tenants.find(x => x.id === inv.tenantId);
     const total = Number(inv.rent) + Number(inv.elec) + Number(inv.gas) + Number(inv.maint) + Number(inv.arr) + Number(inv.oth);
 
-    // --- Header Section ---
-    // Background Header Bar (Matches Source 1 style)
+    // --- Header (Source 1, 2) ---
     doc.setFillColor(15, 23, 42); 
     doc.rect(0, 0, 210, 45, 'F');
     
     doc.setTextColor(255); 
     doc.setFontSize(22); 
     doc.setFont("helvetica", "bold");
-    doc.text("Upright Smart Solution", 105, 18, {align: "center"}); // 
+    doc.text("Upright Smart Solution", 105, 18, {align: "center"}); // [cite: 1]
     
     doc.setFontSize(14);
     doc.text("PROPERTY MONTHLY STATEMENT", 105, 28, {align: "center"}); // [cite: 2]
     
     doc.setFontSize(10); 
     doc.setFont("helvetica", "normal");
-    // Receipt and Billing Period 
-    doc.text(`Receipt No: USS-${inv.id}`, 70, 38, {align: "center"});
-    doc.text(`Billing Period: ${getMonthName(inv.month)}`, 140, 38, {align: "center"});
+    doc.text(`Receipt No: USS-${inv.id}`, 20, 38); // [cite: 3]
+    doc.text(`Billing Period: ${getMonthName(inv.month)}`, 140, 38); // [cite: 4]
 
-    // --- Tenant & Property Details ---
+    // --- Details Section (Source 5-13) ---
     doc.setTextColor(0); 
     let y = 60;
     doc.setFontSize(10);
 
-    // Left Column
+    // Column 1: Tenant Info
     doc.setFont("helvetica", "bold"); doc.text("Tenant's Name:", 20, y); // [cite: 5]
-    doc.setFont("helvetica", "normal"); doc.text(t.name, 55, y);
+    doc.setFont("helvetica", "normal"); doc.text(t.name, 60, y);
     
     doc.setFont("helvetica", "bold"); doc.text("Phone number:", 20, y + 8); // [cite: 6]
-    doc.setFont("helvetica", "normal"); doc.text(t.phone || "N/A", 55, y + 8);
+    doc.setFont("helvetica", "normal"); doc.text(t.phone || "N/A", 60, y + 8);
     
     doc.setFont("helvetica", "bold"); doc.text("CNIC:", 20, y + 16); // [cite: 7]
-    doc.setFont("helvetica", "normal"); doc.text(t.cnic || "N/A", 55, y + 16);
-    
-    doc.setFont("helvetica", "bold"); doc.text("Rented Since:", 20, y + 24); // [cite: 13]
-    doc.setFont("helvetica", "normal"); doc.text(formatDate(t.since), 55, y + 24);
+    doc.setFont("helvetica", "normal"); doc.text(t.cnic || "N/A", 60, y + 16);
 
-    // Right Column
-    doc.setFont("helvetica", "bold"); doc.text("Premises On Rent:", 110, y); // 
-    doc.setFont("helvetica", "normal"); doc.text(t.unit, 155, y);
+    doc.setFont("helvetica", "bold"); doc.text("Rented Since:", 20, y + 24); // [cite: 13]
+    doc.setFont("helvetica", "normal"); doc.text(formatDate(t.since), 60, y + 24);
+
+    // Column 2: Property Info
+    doc.setFont("helvetica", "bold"); doc.text("Premises On Rent:", 110, y); // [cite: 8]
+    doc.setFont("helvetica", "normal"); doc.text(t.unit, 150, y);
     
-    doc.setFont("helvetica", "bold"); doc.text("Surety deposit:", 110, y + 8); // 
-    doc.setFont("helvetica", "normal"); doc.text(fmt(t.dep), 155, y + 8);
+    doc.setFont("helvetica", "bold"); doc.text("Surety deposit:", 110, y + 8); // [cite: 9]
+    doc.setFont("helvetica", "normal"); doc.text(fmt(t.dep), 150, y + 8);
     
-    doc.setFont("helvetica", "bold"); doc.text("Monthly rent:", 110, y + 16); // 
-    doc.setFont("helvetica", "normal"); doc.text(fmt(t.fixedRent), 155, y + 16);
+    doc.setFont("helvetica", "bold"); doc.text("Monthly rent:", 110, y + 16); // [cite: 10]
+    doc.setFont("helvetica", "normal"); doc.text(fmt(t.fixedRent), 150, y + 16);
     
     doc.setFont("helvetica", "bold"); doc.text("Electricity A/C No:", 110, y + 24); // [cite: 11]
-    doc.setFont("helvetica", "normal"); doc.text(t.elec || "N/A", 155, y + 24);
+    doc.setFont("helvetica", "normal"); doc.text(t.elec || "N/A", 150, y + 24);
     
     doc.setFont("helvetica", "bold"); doc.text("Gas A/C No:", 110, y + 32); // [cite: 12]
-    doc.setFont("helvetica", "normal"); doc.text(t.gas || "N/A", 155, y + 32);
+    doc.setFont("helvetica", "normal"); doc.text(t.gas || "N/A", 150, y + 32);
 
-    // --- Billing Table ---
+    // --- Billing Table (Source 14-20, 25, 26) ---
     doc.autoTable({
-        startY: y + 40,
+        startY: y + 42,
         head: [['Description', 'Amount (PKR)']], // [cite: 25, 26]
         body: [
             ['Monthly Rent', fmt(inv.rent)], // [cite: 14]
             ['Electricity Bill', fmt(inv.elec)], // [cite: 15]
             ['Gas Bill', fmt(inv.gas)], // [cite: 16]
-            ['Maintenance/Service Fee', fmt(inv.maint)], // 
+            ['Maintenance/Service Fee', fmt(inv.maint)], // [cite: 19]
             ['Arrears', fmt(inv.arr)], // [cite: 18]
             ['Other Charges', fmt(inv.oth)], // [cite: 17]
             [{content: 'Total Amount to Pay', styles: {fillColor: [240, 240, 240], fontStyle: 'bold'}}, 
              {content: fmt(total), styles: {fillColor: [240, 240, 240], fontStyle: 'bold'}}] // [cite: 20]
         ],
         theme: 'grid',
-        headStyles: {fillColor: [15, 23, 42], halign: 'center'},
-        columnStyles: { 1: { halign: 'right' } }
+        headStyles: {fillColor: [15, 23, 42], halign: 'left'},
+        columnStyles: { 1: { halign: 'right' } },
+        margin: { left: 20, right: 20 }
     });
 
-    // --- Status and Signatures ---
+    // --- Status and Signatures (Source 21, 22, 27) ---
     y = doc.lastAutoTable.finalY + 15;
     doc.setFont("helvetica", "bold"); 
     doc.text("Status: " + (inv.status || "UNPAID"), 20, y); // [cite: 21, 29]
     
-    y += 25;
-    doc.text("________________", 25, y); 
-    doc.text("Signature Landlord", 25, y + 5); // 
+    y += 35;
+    doc.text("________________", 20, y); 
+    doc.text("Signature Landlord", 20, y + 5); // [cite: 22]
     
     doc.text("________________", 140, y); 
-    doc.text("Signature Tenant", 140, y + 5); // 
+    doc.text("Signature Tenant", 140, y + 5); // [cite: 27]
 
-    // --- Footer Disclaimer ---
-    y += 20;
+    // --- Footer Disclaimer (Source 28) ---
+    y += 25;
     doc.setFontSize(8);
     doc.setFont("helvetica", "italic");
-    doc.text("This is a computer generated document and does not require a physical stamp.", 105, y, {align: "center"}); // 
+    doc.text("This is a computer generated document and does not require a physical stamp.", 105, y, {align: "center"}); // [cite: 28]
 
-    // Save and Share
     const blob = doc.output('blob');
     const fileName = `Invoice_${t.name}_${inv.month}.pdf`;
     shareFile = new File([blob], fileName, {type: 'application/pdf'});
@@ -437,3 +435,4 @@
 </script>
 </body>
 </html>
+
