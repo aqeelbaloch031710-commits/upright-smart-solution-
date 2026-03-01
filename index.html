@@ -23,7 +23,8 @@
         .stat-card strong { display: block; font-size: 1.3rem; color: var(--primary); margin-top: 5px; }
         .panel { background: var(--panel); padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
         .input-group label { font-size: 0.75rem; font-weight: bold; color: #64748b; margin-bottom: 4px; display: block; }
-        input, select { padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; font-size: 0.9rem; margin-bottom: 10px; }
+        input, select, textarea { padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; font-size: 0.9rem; margin-bottom: 10px; }
+        textarea { resize: vertical; min-height: 60px; }
         button { padding: 0.9rem; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; color: white; }
         .btn-primary { background: var(--primary); width: 100%; }
         .btn-success { background: var(--success); width: 100%; }
@@ -35,8 +36,6 @@
         .status-PAID { color: var(--success); font-weight: bold; }
         .status-UNPAID { color: var(--danger); font-weight: bold; }
         .status-PARTIALLY-PAID { color: var(--warning); font-weight: bold; }
-        .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); overflow-y:auto; }
-        .modal-content { background:#fff; margin:2% auto; padding:30px; border-radius:16px; width:90%; max-width:1000px; position:relative; }
     </style>
 </head>
 <body>
@@ -113,6 +112,10 @@
                         </select>
                     </div>
                 </div>
+                <div class="input-group"><label>Remarks / Special Note</label>
+                    <textarea id="bNote" placeholder="e.g. 500 discount given for repair..."></textarea>
+                </div>
+
                 <button class="btn-success" onclick="generateInvoice()">Fill Template & Download</button>
                 <button id="waBtn" class="btn-wa" onclick="shareToWhatsApp()" style="display:none;">
                     <span>Share PDF via WhatsApp</span>
@@ -136,20 +139,12 @@
                 <button class="btn-primary" onclick="addCustomer()">Register Sale</button>
             </div>
         </section>
-        <section class="panel">
-            <h3>Accounts</h3>
-            <table id="customerTable">
-                <thead><tr><th>Customer</th><th>Product</th><th>Remaining</th><th>Action</th></tr></thead>
-                <tbody id="customerTableBody"></tbody>
-            </table>
-        </section>
     </div>
 </div>
 
 <script>
     let tenants = JSON.parse(localStorage.getItem("uss_tenants")) || [];
     let invoices = JSON.parse(localStorage.getItem("uss_invoices")) || [];
-    let customers = JSON.parse(localStorage.getItem("upright_installments_v1")) || [];
     let activeID = null, shareFile = null;
 
     const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
@@ -182,7 +177,7 @@
         document.getElementById("tenantBody").innerHTML = tenants.map(t => `
             <tr><td>${t.name}</td><td>${t.unit}</td>
             <td><button class="btn-sm" onclick="loadTenant(${t.id})">Bill</button>
-            <button class="btn-sm" style="background:#ef4444; color:white" onclick="delTenant(${t.id})">X</button></td></tr>`).join('');
+            <button class="btn-sm" style="background:#ef4444; color:white; border:none;" onclick="delTenant(${t.id})">X</button></td></tr>`).join('');
     }
 
     window.saveTenant = () => {
@@ -217,7 +212,8 @@
             rent: document.getElementById("bRent").value || 0, elec: document.getElementById("bElec").value || 0,
             gas: document.getElementById("bGas").value || 0, maint: document.getElementById("bMaint").value || 0,
             arr: document.getElementById("bArr").value || 0, oth: document.getElementById("bOth").value || 0,
-            status: document.getElementById("bStatus").value
+            status: document.getElementById("bStatus").value,
+            note: document.getElementById("bNote").value // SAVE NOTE
         };
         invoices.push(inv);
         localStorage.setItem("uss_invoices", JSON.stringify(invoices));
@@ -239,25 +235,23 @@
                 firstPage.drawText(String(text || "N/A"), { x, y, size, color: rgb(0, 0, 0) });
             };
 
-            // 1. TOP INFO (Receipt & Date)
+            // 1. TOP INFO
             draw(`USS-${inv.id}`, 465, 715);      
             draw(getMonthName(inv.month), 465, 700); 
 
-            // 2. TENANT DATA (Recalibrated for Alignment)
-            // Left Column (Name, Phone, CNIC, Date)
+            // 2. TENANT DATA
             draw(t.name, 110, 658);                
             draw(t.phone, 110, 634);               
             draw(t.cnic, 110, 610);                
             draw(formatDate(t.since), 110, 586);   
 
-            // Right Column (Unit, Deposit, Rent, A/C Nos)
             draw(t.unit, 420, 658);                
             draw(fmt(t.dep), 420, 634);            
             draw(fmt(t.fixedRent), 420, 610);      
             draw(t.elec, 420, 586);                
             draw(t.gas, 420, 562);                 
 
-            // 3. TABLE DATA (Right-aligned values in Amount column)
+            // 3. TABLE DATA
             const tableX = 485; 
             draw(fmt(inv.rent), tableX, 510);      
             draw(fmt(inv.elec), tableX, 490);      
@@ -265,8 +259,13 @@
             draw(fmt(inv.maint), tableX, 450);     
             draw(fmt(inv.arr), tableX, 430);       
             draw(fmt(inv.oth), tableX, 410);       
+
+            // 4. DRAW REMARKS / NOTE ON PDF
+            if(inv.note) {
+                draw("Note: " + inv.note, 50, 410, 8); // Placed at the bottom left area
+            }
             
-            // 4. TOTAL & STATUS (Bottom Summary)
+            // 5. TOTAL & STATUS
             draw(fmt(total), tableX, 370, 12);     
             draw(inv.status, 110, 370, 12);        
 
@@ -283,29 +282,44 @@
 
         } catch (err) {
             console.error(err);
-            alert("Please ensure your Canva file is named 'template.pdf' and is in the same folder.");
+            alert("Ensure 'template.pdf' is in the folder.");
+        }
+    }
+
+    function renderInvoiceHistory(tid) {
+        document.getElementById("invoiceBody").innerHTML = invoices.filter(i => i.tenantId === tid).map(i => `
+            <tr>
+                <td>${formatDate(i.month)}</td>
+                <td>${fmt(Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth))}</td>
+                <td class="status-${i.status}">${i.status}</td>
+                <td>
+                    <button class="btn-sm" onclick="fillTemplate(${i.id})">PDF</button>
+                    <button class="btn-sm" style="background:#ef4444; color:white; border:none;" onclick="delInvoice(${i.id})">Del</button>
+                </td>
+            </tr>`).join('');
+    }
+
+    window.delInvoice = (id) => {
+        if(confirm("Delete this history record?")) {
+            invoices = invoices.filter(i => i.id !== id);
+            localStorage.setItem("uss_invoices", JSON.stringify(invoices));
+            refreshRentUI();
+            if(activeID) renderInvoiceHistory(activeID);
         }
     }
 
     window.shareToWhatsApp = async () => {
         if (navigator.share && shareFile) {
-            try {
-                await navigator.share({ files: [shareFile], title: 'Invoice' });
-            } catch (err) { console.log("Share failed", err); }
+            try { await navigator.share({ files: [shareFile], title: 'Invoice' }); } 
+            catch (err) { console.log("Share failed", err); }
         }
     };
-
-    function renderInvoiceHistory(tid) {
-        document.getElementById("invoiceBody").innerHTML = invoices.filter(i => i.tenantId === tid).map(i => `
-            <tr><td>${formatDate(i.month)}</td><td>${fmt(Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth))}</td>
-            <td class="status-${i.status}">${i.status}</td><td><button class="btn-sm" onclick="fillTemplate(${i.id})">PDF</button></td></tr>`).join('');
-    }
 
     window.clearTenantForm = () => {
         ["tName", "tPhone", "tCnic", "tUnit", "tSince", "tDep", "tFixedRent", "tElec", "tGas"].forEach(id => document.getElementById(id).value = "");
     };
 
-    window.delTenant = (id) => { if(confirm("Delete?")) { tenants = tenants.filter(t => t.id !== id); localStorage.setItem("uss_tenants", JSON.stringify(tenants)); refreshRentUI(); } };
+    window.delTenant = (id) => { if(confirm("Delete Tenant?")) { tenants = tenants.filter(t => t.id !== id); localStorage.setItem("uss_tenants", JSON.stringify(tenants)); refreshRentUI(); } };
 
     refreshRentUI();
 </script>
