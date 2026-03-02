@@ -2,218 +2,147 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Upright Smart Solution – Tenancy Management</title>
+<title>Upright Smart Solution</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
 <style>
-:root{
-  --bg:#f8fafc;--panel:#fff;--primary:#0f172a;
-  --accent:#2563eb;--success:#10b981;
-  --danger:#ef4444;--warn:#f59e0b
-}
-*{box-sizing:border-box;font-family:Inter;margin:0}
-body{background:var(--bg);color:#1e293b}
-header{background:var(--primary);color:#fff;padding:2rem;text-align:center}
-.container{max-width:1200px;margin:auto;padding:1.5rem}
-.panel{background:var(--panel);padding:1.5rem;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.05);margin-bottom:1.5rem}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
-.stat{padding:1rem;border-radius:10px;text-align:center;background:#fff}
-.stat strong{display:block;font-size:1.4rem;margin-top:.4rem}
-input,select,textarea{width:100%;padding:.7rem;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.6rem}
-button{padding:.7rem 1rem;border-radius:8px;border:none;font-weight:700;cursor:pointer}
-.btn{background:var(--primary);color:#fff}
-.btn-success{background:var(--success);color:#fff}
-.btn-danger{background:var(--danger);color:#fff}
-.btn-sm{padding:.3rem .6rem;font-size:.75rem}
-table{width:100%;border-collapse:collapse}
-th,td{padding:.7rem;border-bottom:1px solid #eee}
-.status-PAID{color:var(--success);font-weight:bold}
-.status-UNPAID{color:var(--danger);font-weight:bold}
-.status-PARTIALLY-PAID{color:var(--warn);font-weight:bold}
-#waBtn{display:none;background:#25D366;color:#fff;width:100%;margin-top:.6rem}
+body{font-family:Arial;background:#f5f7fb;margin:0}
+.panel{background:#fff;margin:1rem;padding:1rem;border-radius:8px}
+button{padding:.4rem .7rem;margin:.1rem}
+.status-PAID{color:green;font-weight:bold}
+.status-UNPAID{color:red;font-weight:bold}
+.status-PARTIALLY-PAID{color:orange;font-weight:bold}
 </style>
 </head>
 
 <body>
 
-<header>
-<h1>Upright Smart Solution</h1>
-<p>Tenancy Management System</p>
-</header>
-
-<div class="container">
-
-<!-- DASHBOARD -->
-<div class="stats">
-  <div class="stat">Tenants<strong id="sTenants">0</strong></div>
-  <div class="stat">Monthly Rent<strong id="sRent">PKR 0</strong></div>
-  <div class="stat">Collected<strong style="color:var(--success)" id="sPaid">PKR 0</strong></div>
-  <div class="stat">Pending Arrears<strong style="color:var(--danger)" id="sPending">PKR 0</strong></div>
+<div class="panel">
+<h3>Dashboard</h3>
+Paid: <span id="statPaid">0</span><br>
+Pending Arrears: <span id="statPending">0</span>
 </div>
 
-<!-- TENANT FORM -->
 <div class="panel">
-<h3>Register / Edit Tenant</h3>
-<input type="hidden" id="editId">
-<input id="tName" placeholder="Full Name">
-<input id="tPhone" placeholder="Phone">
-<input id="tUnit" placeholder="Premises">
-<input id="tRent" type="number" placeholder="Monthly Rent">
-<button class="btn" onclick="saveTenant()">Save Tenant</button>
-</div>
-
-<!-- TENANTS -->
-<div class="panel">
-<h3>Tenants</h3>
-<table>
-<thead><tr><th>Name</th><th>Unit</th><th>Action</th></tr></thead>
-<tbody id="tenantList"></tbody>
+<h3>Invoices</h3>
+<table border="1" width="100%">
+<thead>
+<tr><th>Month</th><th>Total</th><th>Status</th><th>Action</th></tr>
+</thead>
+<tbody id="invoiceBody"></tbody>
 </table>
-</div>
-
-<!-- BILLING -->
-<div class="panel">
-<h3>Billing – <span id="activeTenant">Select tenant</span></h3>
-<input type="month" id="bMonth">
-<input type="number" id="bRent" placeholder="Rent">
-<input type="number" id="bArr" placeholder="Arrears">
-<select id="bStatus">
-<option>UNPAID</option>
-<option>PAID</option>
-<option>PARTIALLY-PAID</option>
-</select>
-<textarea id="bNote" placeholder="Remarks"></textarea>
-
-<button class="btn-success" onclick="generateInvoice()">Generate PDF</button>
-<button id="waBtn" onclick="shareWhatsApp()">Share via WhatsApp</button>
-
-<table>
-<thead><tr><th>Month</th><th>Total</th><th>Status</th><th></th></tr></thead>
-<tbody id="invoiceList"></tbody>
-</table>
-</div>
-
 </div>
 
 <script>
-let tenants = JSON.parse(localStorage.getItem("tenants")||"[]");
 let invoices = JSON.parse(localStorage.getItem("invoices")||"[]");
-let activeTenantId=null, shareFile=null;
+let editingInvoiceId = null;
 
 const fmt=v=>"PKR "+Number(v||0).toLocaleString();
 
-function refresh(){
-document.getElementById("sTenants").innerText=tenants.length;
-document.getElementById("sRent").innerText=fmt(tenants.reduce((s,t)=>s+Number(t.rent),0));
+/* 🔁 MONTH SORT */
+function monthKey(m){ return new Date(m+"-01").getTime(); }
 
-let paid=0, pending=0;
-invoices.forEach(i=>{
- if(i.status==="PAID") paid+=Number(i.total);
- else pending+=Number(i.arr||0);
-});
-document.getElementById("sPaid").innerText=fmt(paid);
-document.getElementById("sPending").innerText=fmt(pending);
+/* 🔁 RECALCULATE ARREARS CHAIN */
+function recalcArrears(){
+  let runningArrears = 0;
 
-document.getElementById("tenantList").innerHTML=tenants.map(t=>`
-<tr>
-<td>${t.name}</td>
-<td>${t.unit}</td>
-<td>
-<button class="btn-sm" onclick="selectTenant(${t.id})">Bill</button>
-<button class="btn-sm btn-danger" onclick="deleteTenant(${t.id})">X</button>
-</td>
-</tr>`).join("");
+  invoices.sort((a,b)=>monthKey(a.month)-monthKey(b.month));
+
+  invoices.forEach(inv=>{
+    inv.prevArr = runningArrears;
+
+    let total =
+      Number(inv.rent)+Number(inv.elec)+Number(inv.gas)+
+      Number(inv.maint)+Number(inv.oth)+Number(inv.prevArr);
+
+    if(inv.status==="PAID"){
+      inv.paidAmount = total;
+      inv.arr = 0;
+    }
+    else if(inv.status==="PARTIALLY-PAID"){
+      inv.paidAmount = Number(inv.paidAmount||0);
+      inv.arr = total - inv.paidAmount;
+    }
+    else{
+      inv.paidAmount = 0;
+      inv.arr = total;
+    }
+
+    runningArrears = inv.arr;
+    inv.total = total;
+  });
+
+  localStorage.setItem("invoices",JSON.stringify(invoices));
 }
 
-function saveTenant(){
-const id=document.getElementById("editId").value||Date.now();
-const t={
- id:Number(id),
- name:tName.value,
- unit:tUnit.value,
- rent:Number(tRent.value)
-};
-tenants=tenants.filter(x=>x.id!==t.id);
-tenants.push(t);
-localStorage.setItem("tenants",JSON.stringify(tenants));
-refresh();
+/* 📊 DASHBOARD */
+function refreshStats(){
+  let paid=0, pending=0;
+
+  invoices.forEach(i=>{
+    paid += Number(i.paidAmount||0);
+    pending += Number(i.arr||0);
+  });
+
+  statPaid.innerText = fmt(paid);
+  statPending.innerText = fmt(pending);
 }
 
-function deleteTenant(id){
-if(!confirm("Delete tenant and invoices?"))return;
-tenants=tenants.filter(t=>t.id!==id);
-invoices=invoices.filter(i=>i.tid!==id);
-localStorage.setItem("tenants",JSON.stringify(tenants));
-localStorage.setItem("invoices",JSON.stringify(invoices));
-refresh();
-}
+/* 📄 RENDER */
+function render(){
+  recalcArrears();
+  refreshStats();
 
-function selectTenant(id){
-activeTenantId=id;
-const t=tenants.find(x=>x.id===id);
-activeTenant.innerText=t.name;
-bRent.value=t.rent;
-renderInvoices();
-}
-
-function generateInvoice(){
-if(!activeTenantId)return alert("Select tenant");
-const inv={
- id:Date.now(),
- tid:activeTenantId,
- month:bMonth.value,
- rent:Number(bRent.value),
- arr:Number(bArr.value),
- status:bStatus.value,
- note:bNote.value
-};
-inv.total=inv.rent+inv.arr;
-invoices.push(inv);
-localStorage.setItem("invoices",JSON.stringify(invoices));
-createPDF(inv);
-refresh();
-renderInvoices();
-}
-
-function renderInvoices(){
-invoiceList.innerHTML=invoices.filter(i=>i.tid===activeTenantId).map(i=>`
+  invoiceBody.innerHTML = invoices.map(i=>`
 <tr>
 <td>${i.month}</td>
 <td>${fmt(i.total)}</td>
 <td class="status-${i.status}">${i.status}</td>
-<td><button class="btn-sm" onclick="createPDF(${i.id})">PDF</button></td>
+<td>
+<button onclick="editInvoice(${i.id})">Edit</button>
+<button onclick="reopenInvoice(${i.id})">Reopen</button>
+</td>
 </tr>`).join("");
 }
 
-function createPDF(invId){
-const {jsPDF}=window.jspdf;
-const inv=invoices.find(i=>i.id===invId);
-const t=tenants.find(x=>x.id===inv.tid);
-const doc=new jsPDF();
-doc.text("Upright Smart Solution",105,20,{align:"center"});
-doc.text(`Tenant: ${t.name}`,20,40);
-doc.text(`Month: ${inv.month}`,20,50);
-doc.text(`Total: ${fmt(inv.total)}`,20,60);
-const blob=doc.output("blob");
-shareFile=new File([blob],`Invoice_${t.name}.pdf`,{type:"application/pdf"});
-doc.save(shareFile.name);
-waBtn.style.display="block";
+/* ✏️ EDIT */
+function editInvoice(id){
+  const inv=invoices.find(i=>i.id===id);
+  if(!inv)return;
+  editingInvoiceId=id;
+
+  const paid = prompt("Enter paid amount",inv.paidAmount||0);
+  if(paid===null)return;
+
+  inv.paidAmount = Number(paid);
+  inv.status = inv.paidAmount>=inv.total ? "PAID" : "PARTIALLY-PAID";
+
+  render();
 }
 
-async function shareWhatsApp(){
-if(!shareFile)return;
-if(navigator.canShare && navigator.canShare({files:[shareFile]})){
- await navigator.share({files:[shareFile],title:"Invoice"});
-}else{
- alert("WhatsApp sharing supported on mobile only. PDF downloaded.");
-}
+/* 🔓 REOPEN */
+function reopenInvoice(id){
+  const inv=invoices.find(i=>i.id===id);
+  if(!inv)return;
+
+  inv.status="UNPAID";
+  inv.paidAmount=0;
+  render();
 }
 
-refresh();
+/* DEMO DATA SAFE */
+if(!invoices.length){
+  invoices=[
+    {id:1,month:"2025-01",rent:10000,elec:500,gas:300,maint:0,oth:0,status:"UNPAID"},
+    {id:2,month:"2025-02",rent:10000,elec:400,gas:250,maint:0,oth:0,status:"PARTIALLY-PAID",paidAmount:8000},
+    {id:3,month:"2025-03",rent:10000,elec:600,gas:350,maint:0,oth:0,status:"PAID"}
+  ];
+}
+
+render();
 </script>
+
 </body>
 </html>
