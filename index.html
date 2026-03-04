@@ -1,421 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upright Smart Solution - Unified Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        :root { --bg: #f8fafc; --panel: #ffffff; --primary: #0f172a; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
-        * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
-        body { background: var(--bg); color: #1e293b; line-height: 1.6; }
-        header { background: var(--primary); color: white; padding: 2rem 1rem; text-align: center; }
-        .nav-tabs { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
-        .tab-btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; background: rgba(255,255,255,0.1); color: white; transition: 0.3s; }
-        .tab-btn.active { background: var(--accent); }
-        .container { max-width: 1200px; margin: 1.5rem auto; padding: 0 1.5rem; }
-        .view { display: none; }
-        .view.active { display: block; }
-        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .stat-card { background: var(--panel); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-bottom: 5px solid #e2e8f0; }
-        .stat-card strong { display: block; font-size: 1.3rem; color: var(--primary); margin-top: 5px; }
-        .panel { background: var(--panel); padding: 1.5rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
-        .input-group label { font-size: 0.75rem; font-weight: bold; color: #64748b; margin-bottom: 4px; display: block; }
-        input, select, textarea { padding: 0.8rem; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; font-size: 0.9rem; margin-bottom: 10px; }
-        /* Light Red Highlight for Remarks */
-        #bNote { background-color: #fff1f1; border: 1px solid #fecaca; resize: vertical; min-height: 60px; }
-        button { padding: 0.9rem; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; color: white; }
-        .btn-primary { background: var(--primary); width: 100%; }
-        .btn-success { background: var(--success); width: 100%; }
-        .btn-danger { background: var(--danger); }
-        .btn-wa { background: #25D366; width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-sm { padding: 5px 10px; font-size: 0.75rem; background: #f1f5f9; color: var(--primary); border: 1px solid #ddd; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { text-align: left; padding: 1rem; border-bottom: 1px solid #f1f5f9; }
-        th { background: #f8fafc; color: #64748b; }
-        .status-PAID { color: var(--success); font-weight: bold; }
-        .status-UNPAID { color: var(--danger); font-weight: bold; }
-        .status-PARTIALLY-PAID { color: var(--warning); font-weight: bold; }
-        .modal { display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); overflow-y:auto; }
-        .modal-content { background:#fff; margin:2% auto; padding:30px; border-radius:16px; width:90%; max-width:1000px; position:relative; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upright Smart Estate</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{font-family:Arial;background:#f4f6f9;margin:0;padding:20px}
+h2{margin-top:40px}
+.container{max-width:1200px;margin:auto}
+.card{background:#fff;padding:20px;border-radius:8px;margin-bottom:20px;box-shadow:0 0 10px rgba(0,0,0,0.1)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+input,select,textarea{width:100%;padding:8px;margin-top:5px;margin-bottom:10px}
+button{padding:8px 15px;margin-right:5px;cursor:pointer;border:none;border-radius:5px;background:#1e90ff;color:#fff}
+button.danger{background:red}
+@media(max-width:768px){.form-grid{grid-template-columns:1fr}}
+</style>
 </head>
+
 <body>
-
-<header>
-    <h1>Upright Smart Solution</h1>
-    <h3>Tenancy Management System</h3>
-    <div class="nav-tabs">
-        <button class="tab-btn active" onclick="showTab('rentView')">Property Management</button>
-        <button class="tab-btn" onclick="showTab('insView')">Installment System</button>
-    </div>
-</header>
-
 <div class="container">
-    <div id="rentView" class="view active">
-        <div class="dashboard-stats">
-            <div class="stat-card"><span>Total Tenants</span><strong id="statTenants">0</strong></div>
-            <div class="stat-card"><span>Monthly Rent Pool</span><strong id="statRent">PKR 0</strong></div>
-            <div class="stat-card"><span>Collected</span><strong id="statPaid" style="color:var(--success)">PKR 0</strong></div>
-            <div class="stat-card"><span>Pending Arrears</span><strong id="statPending" style="color:var(--danger)">PKR 0</strong></div>
-        </div>
 
-        <section class="panel">
-            <h2 id="regTitle">1. Register New Tenant</h2>
-            <input type="hidden" id="editTenantId">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                <div class="details-column">
-                    <h4 style="color: var(--accent); margin-bottom:10px;">👤 Personal Details</h4>
-                    <div class="input-group"><label>Full Name</label><input type="text" id="tName"></div>
-                    <div class="input-group"><label>Phone Number</label><input type="text" id="tPhone"></div>
-                    <div class="input-group"><label>CNIC Number</label><input type="text" id="tCnic"></div>
-                </div>
-                <div class="property-column">
-                    <h4 style="color: var(--accent); margin-bottom:10px;">🏠 Property Details</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div class="input-group"><label>Premises on rent:</label><input type="text" id="tUnit"></div>
-                        <div class="input-group"><label>Rented Since</label><input type="date" id="tSince"></div>
-                        <div class="input-group"><label>Surety Deposit</label><input type="number" id="tDep"></div>
-                        <div class="input-group"><label>Monthly Rent</label><input type="number" id="tFixedRent"></div>
-                        <div class="input-group"><label>Elec A/C #</label><input type="text" id="tElec"></div>
-                        <div class="input-group"><label>Gas A/C #</label><input type="text" id="tGas"></div>
-                    </div>
-                </div>
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button id="saveBtn" class="btn-primary" onclick="saveTenant()" style="flex:3;">Save Tenant</button>
-                <button onclick="clearTenantForm()" style="flex:1; background:#64748b;">Clear</button>
-            </div>
-        </section>
+<h1>Upright Smart Estate</h1>
 
-        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 2rem;">
-            <section class="panel">
-                <h3>Registered Tenants</h3>
-                <table>
-                    <thead><tr><th>Name</th><th>Unit</th><th>Action</th></tr></thead>
-                    <tbody id="tenantBody"></tbody>
-                </table>
-            </section>
-            <section class="panel">
-                <h3>Billing: <span id="activeName" style="color:var(--accent)">Select Tenant</span> <small id="activeUnit" style="color:#64748b"></small></h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="input-group"><label>Month</label><input type="month" id="bMonth"></div>
-                    <div class="input-group"><label>Rent</label><input type="number" id="bRent"></div>
-                    <div class="input-group"><label>Elec Bill</label><input type="number" id="bElec"></div>
-                    <div class="input-group"><label>Gas Bill</label><input type="number" id="bGas"></div>
-                    <div class="input-group"><label>Maintenance/Repairing</label><input type="number" id="bMaint"></div>
-                    <div class="input-group"><label>Arrears</label><input type="number" id="bArr"></div>
-                    <div class="input-group"><label>Other</label><input type="number" id="bOth"></div>
-                    <div class="input-group"><label>Status</label>
-                        <select id="bStatus">
-                            <option value="UNPAID">UNPAID</option>
-                            <option value="PAID">PAID</option>
-                            <option value="PARTIALLY-PAID">PARTIALLY PAID</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label>Monthly Remarks / Notes (Visible on Invoice)</label>
-                    <textarea id="bNote" placeholder="e.g. Previous month balance adjusted..."></textarea>
-                </div>
-                <button class="btn-success" onclick="generateInvoice()">Create & Download PDF</button>
-                <button id="waBtn" class="btn-wa" onclick="shareToWhatsApp()" style="display:none;">
-                    <span>Share PDF via WhatsApp</span>
-                </button>
-                <h4 style="margin-top:20px;">History</h4>
-                <table style="margin-top:10px;">
-                    <thead><tr><th>Month</th><th>Total (PKR)</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody id="invoiceBody"></tbody>
-                </table>
-            </section>
-        </div>
-    </div>
-
-    <div id="insView" class="view">
-        <section class="panel">
-            <h3>New Installment Sale</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                <input id="cName" placeholder="Customer Name">
-                <input id="cProduct" placeholder="Product">
-                <input id="cTotal" type="number" placeholder="Total Price">
-                <input id="cDown" type="number" placeholder="Down Payment">
-                <button class="btn-primary" onclick="addCustomer()">Register Sale</button>
-            </div>
-        </section>
-        <section class="panel">
-            <h3>Accounts</h3>
-            <table id="customerTable">
-                <thead><tr><th>Customer</th><th>Product</th><th>Remaining (PKR)</th><th>Action</th></tr></thead>
-                <tbody id="customerTableBody"></tbody>
-            </table>
-        </section>
-    </div>
+<!-- ================= TENANT SECTION ================= -->
+<h2>Add / Edit Tenant</h2>
+<div class="card">
+<div class="form-grid">
+<div>
+<label>Tenant Name</label>
+<input id="tenantName">
+<label>CNIC</label>
+<input id="tenantCnic">
+<label>Phone</label>
+<input id="tenantPhone">
+</div>
+<div>
+<label>Premises on Rent</label>
+<input id="premises">
+<label>Rented Since</label>
+<input type="date" id="rentedSince">
+<label>Monthly Rent</label>
+<input type="number" id="monthlyRent">
+<label>Surety Deposit</label>
+<input type="number" id="suretyDeposit">
+<label>Electricity Meter</label>
+<input id="electricityMeter">
+<label>Gas Meter</label>
+<input id="gasMeter">
+</div>
+</div>
+<button onclick="saveTenant()">Save</button>
+<button onclick="clearTenant()">Clear</button>
 </div>
 
-<div id="insModal" class="modal">
-    <div class="modal-content">
-        <span onclick="closeModal()" style="position:absolute; right:20px; cursor:pointer; font-size:24px;">&times;</span>
-        <h2 id="modalTitle">Customer</h2>
-        <div class="panel" style="background:#f8fafc; margin-top:15px;">
-            <h4>Add Payment</h4>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top:10px;">
-                <input type="date" id="insDate">
-                <input type="number" id="insAmount" placeholder="Amount">
-                <button class="btn-success" onclick="addInstallment()">Post Payment</button>
-            </div>
-        </div>
-        <table>
-            <thead><tr><th>Date</th><th>Amount (PKR)</th></tr></thead>
-            <tbody id="historyTableBody"></tbody>
-        </table>
-    </div>
+<h2>Registered Tenants</h2>
+<div id="tenantList"></div>
+
+<!-- ================= BILLING SECTION ================= -->
+<h2>Billing</h2>
+<div class="card">
+
+<label>Select Tenant</label>
+<select id="billTenant"></select>
+
+<label>Select Bill Month</label>
+<input type="month" id="billMonth">
+
+<label>Monthly Rent</label>
+<input id="billRent">
+
+<label>Gas Bill</label>
+<input id="gasBill">
+
+<label>Electricity Bill</label>
+<input id="electricityBill">
+
+<label>Maintenance / Repair</label>
+<input id="maintenance">
+
+<label>Previous Arrears</label>
+<input id="previousArrears">
+
+<label>Other Charges</label>
+<input id="otherCharges">
+
+<label>Status</label>
+<select id="status">
+<option>Paid</option>
+<option>Unpaid</option>
+<option>Partially Paid</option>
+</select>
+
+<label>Remarks / Notes</label>
+<textarea id="remarks"></textarea>
+
+<button onclick="saveInvoice()">Save</button>
+<button onclick="previewInvoice()">Preview</button>
+<button onclick="downloadInvoice()">Download PDF</button>
+<button onclick="printInvoice()">Print</button>
+<button onclick="shareWhatsApp()">Share WhatsApp</button>
+
 </div>
 
-<script>
-    let tenants = JSON.parse(localStorage.getItem("uss_tenants")) || [];
-    let invoices = JSON.parse(localStorage.getItem("uss_invoices")) || [];
-    let customers = JSON.parse(localStorage.getItem("upright_installments_v1")) || [];
-    let activeID = null, currentCustIdx = null, shareFile = null;
+<h2>Invoice History</h2>
+<div id="invoiceList"></div>
 
-    const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
-    const formatDate = (d) => d ? d.split("-").reverse().join("-") : "N/A";
-    
-    const getMonthName = (mStr) => {
-        if(!mStr) return "N/A";
-        const d = new Date(mStr + "-01");
-        return `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`;
-    };
-
-    window.showTab = (id) => {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if (event) event.currentTarget.classList.add('active');
-    };
-
-    window.refreshRentUI = () => {
-        document.getElementById("statTenants").innerText = tenants.length;
-        document.getElementById("statRent").innerText = fmt(tenants.reduce((s, t) => s + Number(t.fixedRent), 0));
-        let paid = 0, unpaid = 0;
-        invoices.forEach(i => {
-            let total = Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth);
-            i.status === "PAID" ? paid += total : unpaid += total;
-        });
-        document.getElementById("statPaid").innerText = fmt(paid);
-        document.getElementById("statPending").innerText = fmt(unpaid);
-
-        document.getElementById("tenantBody").innerHTML = tenants.map(t => `
-            <tr><td>${t.name}</td><td>${t.unit}</td>
-            <td style="display:flex; gap:5px;">
-                <button class="btn-sm" onclick="loadTenant(${t.id})">Bill</button>
-                <button class="btn-sm" style="background:#64748b; color:white;" onclick="editTenant(${t.id})">Edit</button>
-                <button class="btn-sm btn-danger" style="color:white" onclick="delTenant(${t.id})">X</button>
-            </td></tr>`).join('');
-    };
-
-    window.clearTenantForm = () => {
-        ["tName", "tPhone", "tCnic", "tUnit", "tSince", "tDep", "tFixedRent", "tElec", "tGas", "editTenantId"].forEach(id => {
-            document.getElementById(id).value = "";
-        });
-        document.getElementById("regTitle").innerText = "1. Register New Tenant";
-        document.getElementById("saveBtn").innerText = "Save Tenant";
-    };
-
-    window.editTenant = (id) => {
-        const t = tenants.find(x => x.id === id);
-        if(!t) return;
-        document.getElementById("tName").value = t.name;
-        document.getElementById("tPhone").value = t.phone;
-        document.getElementById("tCnic").value = t.cnic;
-        document.getElementById("tUnit").value = t.unit;
-        document.getElementById("tSince").value = t.since;
-        document.getElementById("tDep").value = t.dep;
-        document.getElementById("tFixedRent").value = t.fixedRent;
-        document.getElementById("tElec").value = t.elec;
-        document.getElementById("tGas").value = t.gas;
-        document.getElementById("editTenantId").value = t.id;
-        document.getElementById("regTitle").innerText = "Update Tenant: " + t.name;
-        document.getElementById("saveBtn").innerText = "Apply Changes";
-        window.scrollTo(0,0);
-    };
-
-    window.saveTenant = () => {
-        const editId = document.getElementById("editTenantId").value;
-        const t = {
-            id: editId ? Number(editId) : Date.now(), 
-            name: document.getElementById("tName").value,
-            phone: document.getElementById("tPhone").value, 
-            cnic: document.getElementById("tCnic").value,
-            unit: document.getElementById("tUnit").value, 
-            since: document.getElementById("tSince").value,
-            dep: document.getElementById("tDep").value, 
-            fixedRent: document.getElementById("tFixedRent").value,
-            elec: document.getElementById("tElec").value, 
-            gas: document.getElementById("tGas").value
-        };
-        if(!t.name || !t.unit) return alert("Please enter at least the Name and Unit!");
-        
-        if(editId) {
-            const idx = tenants.findIndex(x => x.id === Number(editId));
-            tenants[idx] = t;
-        } else {
-            tenants.push(t);
-        }
-
-        localStorage.setItem("uss_tenants", JSON.stringify(tenants));
-        window.refreshRentUI(); 
-        window.clearTenantForm();
-    };
-
-    window.delTenant = (id) => { 
-        if(confirm("Delete Tenant and all associated invoices?")) { 
-            tenants = tenants.filter(t => t.id !== id); 
-            invoices = invoices.filter(i => i.tenantId !== id); 
-            localStorage.setItem("uss_tenants", JSON.stringify(tenants)); 
-            localStorage.setItem("uss_invoices", JSON.stringify(invoices)); 
-            window.refreshRentUI(); 
-        } 
-    };
-
-    window.loadTenant = (id) => {
-        activeID = id;
-        const t = tenants.find(x => x.id === id);
-        document.getElementById("activeName").innerText = t.name;
-        // Show Premises in Billing section
-        document.getElementById("activeUnit").innerText = `(${t.unit})`;
-        document.getElementById("bRent").value = t.fixedRent;
-        document.getElementById("bNote").value = "";
-        const arrears = invoices.filter(i => i.tenantId === id && i.status !== "PAID")
-            .reduce((s, i) => s + (Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth)), 0);
-        document.getElementById("bArr").value = arrears;
-        window.renderInvoiceHistory(id);
-    };
-
-    window.generateInvoice = () => {
-        if(!activeID) return alert("Please select a tenant from the list first!");
-        const inv = {
-            id: Date.now(), tenantId: activeID, month: document.getElementById("bMonth").value,
-            rent: document.getElementById("bRent").value || 0, elec: document.getElementById("bElec").value || 0,
-            gas: document.getElementById("bGas").value || 0, maint: document.getElementById("bMaint").value || 0,
-            arr: document.getElementById("bArr").value || 0, oth: document.getElementById("bOth").value || 0,
-            status: document.getElementById("bStatus").value,
-            note: document.getElementById("bNote").value,
-            issueDate: new Date().toLocaleDateString('en-GB')
-        };
-        invoices.push(inv);
-        localStorage.setItem("uss_invoices", JSON.stringify(invoices));
-        window.createPDF(inv.id); 
-        window.refreshRentUI(); 
-        window.renderInvoiceHistory(activeID);
-    };
-
-    window.createPDF = (id) => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const inv = invoices.find(x => x.id === id);
-        if(!inv) return;
-        const t = tenants.find(x => x.id === inv.tenantId);
-        
-        const tenantInvoices = invoices.filter(i => i.tenantId === inv.tenantId).sort((a,b) => a.id - b.id);
-        const receiptIndex = tenantInvoices.findIndex(i => i.id === inv.id) + 1;
-
-        const total = Number(inv.rent) + Number(inv.elec) + Number(inv.gas) + Number(inv.maint) + Number(inv.arr) + Number(inv.oth);
-
-        doc.setFillColor(15, 23, 42); doc.rect(0, 0, 210, 45, 'F');
-        doc.setTextColor(255); doc.setFontSize(22); doc.setFont("helvetica", "bold");
-        doc.text("Upright Smart Solution", 105, 18, {align: "center"}); 
-        doc.setFontSize(14); doc.text("PROPERTY MONTHLY STATEMENT", 105, 28, {align: "center"}); 
-        doc.setFontSize(10); doc.setFont("helvetica", "normal");
-        
-        doc.text(`Receipt No: USS-${receiptIndex}`, 20, 38);
-        doc.text(`Billing Month: ${getMonthName(inv.month)}`, 140, 38);
-        doc.text(`Issue Date: ${inv.issueDate || new Date().toLocaleDateString('en-GB')}`, 140, 42);
-
-        doc.setTextColor(0); let y = 60;
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "bold"); doc.text("Tenant's Name:", 20, y); 
-        doc.setFont("helvetica", "normal"); doc.text(t.name, 60, y);
-        doc.setFont("helvetica", "bold"); doc.text("Premises On Rent:", 110, y); 
-        doc.setFont("helvetica", "normal"); doc.text(t.unit, 150, y);
-        
-        y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("Phone number:", 20, y); 
-        doc.setFont("helvetica", "normal"); doc.text(t.phone || "N/A", 60, y);
-        doc.setFont("helvetica", "bold"); doc.text("Surety deposit:", 110, y); 
-        doc.setFont("helvetica", "normal"); doc.text(fmt(t.dep), 150, y);
-
-        y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("CNIC:", 20, y); 
-        doc.setFont("helvetica", "normal"); doc.text(t.cnic || "N/A", 60, y);
-        doc.setFont("helvetica", "bold"); doc.text("Monthly rent:", 110, y); 
-        doc.setFont("helvetica", "normal"); doc.text(fmt(t.fixedRent), 150, y);
-
-        y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("Rented Since:", 20, y); 
-        doc.setFont("helvetica", "normal"); doc.text(formatDate(t.since), 60, y);
-        doc.setFont("helvetica", "bold"); doc.text("Electricity A/C No:", 110, y); 
-        doc.setFont("helvetica", "normal"); doc.text(t.elec || "N/A", 150, y);
-
-        y += 8;
-        doc.setFont("helvetica", "bold"); doc.text("Gas A/C No:", 110, y); 
-        doc.setFont("helvetica", "normal"); doc.text(t.gas || "N/A", 150, y);
-
-        doc.autoTable({
-            startY: y + 10,
-            head: [['Description', 'Amount (PKR)']], 
-            body: [
-                ['Monthly Rent', fmt(inv.rent)], 
-                ['Electricity Bill', fmt(inv.elec)], 
-                ['Gas Bill', fmt(inv.gas)], 
-                ['Maintenance/Service Fee', fmt(inv.maint)], 
-                ['Arrears', fmt(inv.arr)], 
-                ['Other Charges', fmt(inv.oth)], 
-                [{content: 'Total Amount to Pay', styles: {fillColor: [240, 240, 240], fontStyle: 'bold'}}, 
-                 {content: fmt(total), styles: {fillColor: [240, 240, 240], fontStyle: 'bold'}}] 
-            ],
-            theme: 'grid',
-            headStyles: {fillColor: [15, 23, 42], halign: 'left'},
-            columnStyles: { 1: { halign: 'right' } },
-            margin: { left: 20, right: 20 }
-        });
-
-        y = doc.lastAutoTable.finalY + 10;
-        
-        if (inv.note) {
-            doc.setFont("helvetica", "bold");
-            doc.text("Remarks / Notes:", 20, y);
-            doc.setFont("helvetica", "normal");
-            const splitNote = doc.splitTextToSize(inv.note, 170);
-            doc.text(splitNote, 20, y + 6);
-            y += (splitNote.length * 6) + 10;
-        }
-
-        doc.setFont("helvetica", "bold"); 
-        doc.text("Status: " + (inv.status || "UNPAID"), 20, y); 
-        y += 30;
-        doc.text("________________", 20, y); doc.text("Signature Landlord", 20, y + 5); 
-        doc.text("________________", 140, y); doc.text("Signature Tenant", 140, y + 5); 
-
-        doc.setFontSize(8); doc.setFont("helvetica", "italic");
-        doc.text("This is a computer generated document and does not require a physical stamp.", 105, 285, {align: "center"}); 
+</div>
 
 <script type="module">
 
-/* ================= FIREBASE SETUP ================= */
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-  getFirestore, collection, addDoc, getDocs,
-  doc, updateDoc, deleteDoc 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBjaAhmnJ2vXijt9UIbEhmuRJHTZaUFO1A",
+  apiKey: "AIzaSy...",
   authDomain: "upright-management-cc29f.firebaseapp.com",
   projectId: "upright-management-cc29f",
-  storageBucket: "upright-management-cc29f.firebasestorage.app",
+  storageBucket: "upright-management-cc29f.appspot.com",
   messagingSenderId: "61396893247",
   appId: "1:61396893247:web:406b3c44db76f8eaf7028a"
 };
@@ -423,168 +127,215 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ================= VARIABLES ================= */
+let currentTenantId=null;
+let currentInvoiceId=null;
 
-let tenants = [];
-let invoices = [];
-let customers = [];
-
-let activeID = null, currentCustIdx = null, shareFile = null;
-
-const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
-const formatDate = (d) => d ? d.split("-").reverse().join("-") : "N/A";
-
-const getMonthName = (mStr) => {
-  if(!mStr) return "N/A";
-  const d = new Date(mStr + "-01");
-  return `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`;
+// ================= TENANT =================
+window.saveTenant = async function(){
+const data={
+name:tenantName.value,
+cnic:tenantCnic.value,
+phone:tenantPhone.value,
+premises:premises.value,
+rentedSince:rentedSince.value,
+monthlyRent:monthlyRent.value,
+suretyDeposit:suretyDeposit.value,
+electricityMeter:electricityMeter.value,
+gasMeter:gasMeter.value,
+createdAt:new Date()
 };
-
-/* ================= LOAD ALL DATA ================= */
-
-async function loadAllData() {
-
-  tenants = [];
-  invoices = [];
-  customers = [];
-
-  const tenantSnap = await getDocs(collection(db, "tenants"));
-  tenantSnap.forEach(d => tenants.push({ id: d.id, ...d.data() }));
-
-  const invoiceSnap = await getDocs(collection(db, "invoices"));
-  invoiceSnap.forEach(d => invoices.push({ id: d.id, ...d.data() }));
-
-  const custSnap = await getDocs(collection(db, "customers"));
-  custSnap.forEach(d => customers.push({ id: d.id, ...d.data() }));
-
-  refreshRentUI();
-  renderInsTable();
+if(currentTenantId){
+await updateDoc(doc(db,"tenants",currentTenantId),data);
+currentTenantId=null;
+}else{
+await addDoc(collection(db,"tenants"),data);
+}
+clearTenant();
+loadTenants();
 }
 
-/* ================= TENANT FUNCTIONS ================= */
+window.clearTenant=function(){
+document.querySelectorAll("#tenantName,#tenantCnic,#tenantPhone,#premises,#rentedSince,#monthlyRent,#suretyDeposit,#electricityMeter,#gasMeter").forEach(i=>i.value="");
+}
 
-window.saveTenant = async () => {
+async function loadTenants(){
+tenantList.innerHTML="";
+billTenant.innerHTML="";
+const snap=await getDocs(collection(db,"tenants"));
+snap.forEach(d=>{
+const t=d.data();
+tenantList.innerHTML+=`
+<div class="card">
+${t.name} - ${t.premises}
+<button onclick="editTenant('${d.id}')">Edit</button>
+<button class="danger" onclick="deleteTenant('${d.id}')">Delete</button>
+</div>`;
+billTenant.innerHTML+=`<option value="${d.id}" data-rent="${t.monthlyRent}" data-phone="${t.phone}">${t.name}</option>`;
+});
+}
 
-  const editId = document.getElementById("editTenantId").value;
+window.editTenant=async function(id){
+const snap=await getDoc(doc(db,"tenants",id));
+const t=snap.data();
+currentTenantId=id;
+tenantName.value=t.name;
+tenantCnic.value=t.cnic;
+tenantPhone.value=t.phone;
+premises.value=t.premises;
+rentedSince.value=t.rentedSince;
+monthlyRent.value=t.monthlyRent;
+suretyDeposit.value=t.suretyDeposit;
+electricityMeter.value=t.electricityMeter;
+gasMeter.value=t.gasMeter;
+}
 
-  const t = {
-    name: tName.value,
-    phone: tPhone.value,
-    cnic: tCnic.value,
-    unit: tUnit.value,
-    since: tSince.value,
-    dep: tDep.value,
-    fixedRent: tFixedRent.value,
-    elec: tElec.value,
-    gas: tGas.value
-  };
+window.deleteTenant=async function(id){
+await deleteDoc(doc(db,"tenants",id));
+loadTenants();
+}
 
-  if(!t.name || !t.unit) return alert("Enter Name & Unit");
+// Auto rent fill
+billTenant.addEventListener("change",()=>{
+const rent=billTenant.selectedOptions[0].dataset.rent;
+billRent.value=rent;
+});
 
-  if(editId){
-    await updateDoc(doc(db, "tenants", editId), t);
-  } else {
-    await addDoc(collection(db, "tenants"), t);
-  }
+// ================= INVOICE =================
 
-  await loadAllData();
-  clearTenantForm();
-};
+async function getNextInvoiceNumber(){
+const ref=doc(db,"counters","invoiceCounter");
+const snap=await getDoc(ref);
+let current=1;
+if(snap.exists()){
+current=snap.data().current;
+await updateDoc(ref,{current:current+1});
+}else{
+await setDoc(ref,{current:2});
+}
+return "USS-"+current;
+}
 
-window.delTenant = async (id) => {
+window.saveInvoice=async function(){
+const invoiceNo=await getNextInvoiceNumber();
+const total=Number(billRent.value||0)+Number(gasBill.value||0)+Number(electricityBill.value||0)+Number(maintenance.value||0)+Number(previousArrears.value||0)+Number(otherCharges.value||0);
 
-  if(!confirm("Delete Tenant & invoices?")) return;
+await addDoc(collection(db,"invoices"),{
+invoiceNo,
+tenantId:billTenant.value,
+billMonth:billMonth.value,
+issueDate:new Date(),
+monthlyRent:billRent.value,
+gasBill:gasBill.value,
+electricityBill:electricityBill.value,
+maintenance:maintenance.value,
+previousArrears:previousArrears.value,
+otherCharges:otherCharges.value,
+status:status.value,
+remarks:remarks.value,
+total
+});
+loadInvoices();
+alert("Invoice Saved");
+}
 
-  await deleteDoc(doc(db, "tenants", id));
+async function loadInvoices(){
+invoiceList.innerHTML="";
+const snap=await getDocs(collection(db,"invoices"));
+snap.forEach(d=>{
+const i=d.data();
+invoiceList.innerHTML+=`
+<div class="card">
+${i.invoiceNo} - ${i.billMonth} - Rs ${i.total}
+<button onclick="previewInvoiceById('${d.id}')">Preview</button>
+<button onclick="deleteInvoice('${d.id}')">Delete</button>
+</div>`;
+});
+}
 
-  const related = invoices.filter(i => i.tenantId === id);
-  for (let inv of related) {
-    await deleteDoc(doc(db, "invoices", inv.id));
-  }
+window.deleteInvoice=async function(id){
+await deleteDoc(doc(db,"invoices",id));
+loadInvoices();
+}
 
-  await loadAllData();
-};
+// ================= PDF =================
+async function generatePDF(data){
+const {jsPDF}=window.jspdf;
+const docPDF=new jsPDF();
 
-/* ================= INVOICE FUNCTIONS ================= */
+docPDF.setFillColor(135,206,235);
+docPDF.rect(0,0,210,30,"F");
+docPDF.setTextColor(255,255,255);
+docPDF.setFontSize(18);
+docPDF.text("Upright Smart Estate",105,15,{align:"center"});
+docPDF.setFontSize(14);
+docPDF.text("Tenancy Monthly Statement",105,25,{align:"center"});
 
-window.generateInvoice = async () => {
+docPDF.setTextColor(0,0,0);
+docPDF.setFontSize(12);
 
-  if(!activeID) return alert("Select tenant first");
+docPDF.text("Invoice No: "+data.invoiceNo,20,40);
+docPDF.text("Bill Month: "+data.billMonth,20,50);
+docPDF.text("Status: "+data.status,20,60);
 
-  const inv = {
-    tenantId: activeID,
-    month: bMonth.value,
-    rent: bRent.value || 0,
-    elec: bElec.value || 0,
-    gas: bGas.value || 0,
-    maint: bMaint.value || 0,
-    arr: bArr.value || 0,
-    oth: bOth.value || 0,
-    status: bStatus.value,
-    note: bNote.value,
-    issueDate: new Date().toLocaleDateString('en-GB')
-  };
+let y=80;
+docPDF.text("Monthly Rent: "+data.monthlyRent,20,y); y+=10;
+docPDF.text("Gas Bill: "+data.gasBill,20,y); y+=10;
+docPDF.text("Electricity Bill: "+data.electricityBill,20,y); y+=10;
+docPDF.text("Maintenance: "+data.maintenance,20,y); y+=10;
+docPDF.text("Previous Arrears: "+data.previousArrears,20,y); y+=10;
+docPDF.text("Other Charges: "+data.otherCharges,20,y); y+=10;
 
-  await addDoc(collection(db, "invoices"), inv);
+docPDF.text("Total: Rs "+data.total,20,y+10);
 
-  await loadAllData();
+docPDF.text("Remarks: "+data.remarks,20,y+25);
 
-  const latest = invoices[invoices.length - 1];
-  if(latest) createPDF(latest.id);
-};
+docPDF.text("Landlord Signature: ____________",20,260);
+docPDF.text("Tenant Signature: ____________",120,260);
 
-window.delInvoice = async (id) => {
-  if(!confirm("Delete this invoice?")) return;
-  await deleteDoc(doc(db, "invoices", id));
-  await loadAllData();
-};
+return docPDF;
+}
 
-/* ================= INSTALLMENT SYSTEM ================= */
+window.previewInvoice=async function(){
+const total=Number(billRent.value||0)+Number(gasBill.value||0)+Number(electricityBill.value||0)+Number(maintenance.value||0)+Number(previousArrears.value||0)+Number(otherCharges.value||0);
+const pdf=await generatePDF({
+invoiceNo:"Preview",
+billMonth:billMonth.value,
+status:status.value,
+monthlyRent:billRent.value,
+gasBill:gasBill.value,
+electricityBill:electricityBill.value,
+maintenance:maintenance.value,
+previousArrears:previousArrears.value,
+otherCharges:otherCharges.value,
+remarks:remarks.value,
+total
+});
+pdf.output("dataurlnewwindow");
+}
 
-window.addCustomer = async () => {
+window.downloadInvoice=async function(){
+previewInvoice();
+}
 
-  const c = {
-    name: cName.value,
-    product: cProduct.value,
-    totalPrice: Number(cTotal.value),
-    downPayment: Number(cDown.value),
-    remaining: Number(cTotal.value) - Number(cDown.value),
-    payments: []
-  };
+window.printInvoice=function(){
+window.print();
+}
 
-  if(!c.name) return alert("Enter Customer Name");
+window.shareWhatsApp=function(){
+const phone=billTenant.selectedOptions[0].dataset.phone;
+const message=`Upright Smart Estate\nMonthly Statement\nTotal: Rs ${billRent.value}`;
+window.open(`https://wa.me/92${phone}?text=${encodeURIComponent(message)}`,"_blank");
+}
 
-  await addDoc(collection(db, "customers"), c);
-  await loadAllData();
-};
+window.previewInvoiceById=async function(id){
+const snap=await getDoc(doc(db,"invoices",id));
+const pdf=await generatePDF(snap.data());
+pdf.output("dataurlnewwindow");
+}
 
-window.addInstallment = async () => {
-
-  const cust = customers[currentCustIdx];
-
-  const amt = Number(insAmount.value);
-
-  cust.payments.push({
-    date: insDate.value,
-    amount: amt
-  });
-
-  cust.remaining -= amt;
-
-  await updateDoc(doc(db, "customers", cust.id), cust);
-
-  await loadAllData();
-};
-
-/* ================= KEEP YOUR EXISTING UI + PDF FUNCTIONS ================= */
-/* DO NOT CHANGE refreshRentUI(), createPDF(), renderInvoiceHistory() etc */
-/* They will work automatically because tenants/invoices arrays now come from Firebase */
-
-/* ================= START APP ================= */
-
-loadAllData();
+loadTenants();
+loadInvoices();
 
 </script>
 </body>
 </html>
-
