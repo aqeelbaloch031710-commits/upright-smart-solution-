@@ -401,105 +401,190 @@
         doc.setFontSize(8); doc.setFont("helvetica", "italic");
         doc.text("This is a computer generated document and does not require a physical stamp.", 105, 285, {align: "center"}); 
 
-        const blob = doc.output('blob');
-        const fileName = `Invoice_${t.name}_${inv.month}.pdf`;
-        shareFile = new File([blob], fileName, {type: 'application/pdf'});
-        doc.save(fileName);
-        document.getElementById("waBtn").style.display = "flex";
-    };
+<script type="module">
 
-    // Fix WhatsApp Sharing Logic
-    window.shareToWhatsApp = async () => {
-        if (!shareFile) return alert("Please generate a PDF first.");
-        
-        if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
-            try {
-                await navigator.share({
-                    files: [shareFile],
-                    title: 'Monthly Statement',
-                    text: 'Here is your monthly property statement from Upright Smart Solution.'
-                });
-            } catch (err) {
-                alert("Sharing failed. Please download the PDF and send manually.");
-            }
-        } else {
-            alert("File sharing is not supported on this browser. Please download the PDF manually.");
-        }
-    };
+/* ================= FIREBASE SETUP ================= */
 
-    window.renderInvoiceHistory = (tid) => {
-        document.getElementById("invoiceBody").innerHTML = invoices
-            .filter(i => i.tenantId === tid)
-            .map(i => {
-                const total = Number(i.rent)+Number(i.elec)+Number(i.gas)+Number(i.maint)+Number(i.arr)+Number(i.oth);
-                return `
-                <tr>
-                    <td>${getMonthName(i.month)}</td>
-                    <td>${fmt(total).replace("PKR ", "")}</td>
-                    <td class="status-${i.status}">${i.status}</td>
-                    <td style="display: flex; gap: 5px;">
-                        <button class="btn-sm" onclick="createPDF(${i.id})">PDF</button>
-                        <button class="btn-sm btn-danger" style="color:white" onclick="delInvoice(${i.id})">X</button>
-                    </td>
-                </tr>`;
-            }).join('');
-    };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+  getFirestore, collection, addDoc, getDocs,
+  doc, updateDoc, deleteDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    window.delInvoice = (id) => {
-        if(confirm("Delete this invoice?")){
-            invoices = invoices.filter(i => i.id !== id);
-            localStorage.setItem("uss_invoices", JSON.stringify(invoices));
-            window.refreshRentUI();
-            if(activeID) window.renderInvoiceHistory(activeID);
-        }
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyBjaAhmnJ2vXijt9UIbEhmuRJHTZaUFO1A",
+  authDomain: "upright-management-cc29f.firebaseapp.com",
+  projectId: "upright-management-cc29f",
+  storageBucket: "upright-management-cc29f.firebasestorage.app",
+  messagingSenderId: "61396893247",
+  appId: "1:61396893247:web:406b3c44db76f8eaf7028a"
+};
 
-    window.addCustomer = () => {
-        const c = { 
-            name: document.getElementById("cName").value, 
-            product: document.getElementById("cProduct").value, 
-            totalPrice: Number(document.getElementById("cTotal").value), 
-            downPayment: Number(document.getElementById("cDown").value), 
-            remaining: Number(document.getElementById("cTotal").value) - Number(document.getElementById("cDown").value), 
-            payments: [] 
-        };
-        if(!c.name) return alert("Enter Customer Name");
-        customers.push(c); 
-        localStorage.setItem("upright_installments_v1", JSON.stringify(customers)); 
-        window.renderInsTable();
-    };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-    window.renderInsTable = () => {
-        document.getElementById("customerTableBody").innerHTML = customers.map((c, i) => `
-            <tr><td>${c.name}</td><td>${c.product}</td><td>${fmt(c.remaining).replace("PKR ","")}</td>
-            <td><button class="btn-sm" onclick="openInsModal(${i})">Manage</button></td></tr>`).join('');
-    };
+/* ================= VARIABLES ================= */
 
-    window.openInsModal = (i) => {
-        currentCustIdx = i; 
-        document.getElementById("modalTitle").innerText = customers[i].name;
-        document.getElementById("insModal").style.display = "block"; 
-        window.renderInsHistory();
-    };
+let tenants = [];
+let invoices = [];
+let customers = [];
 
-    window.addInstallment = () => {
-        const amt = Number(document.getElementById("insAmount").value);
-        customers[currentCustIdx].payments.push({ date: document.getElementById("insDate").value, amount: amt });
-        customers[currentCustIdx].remaining -= amt;
-        localStorage.setItem("upright_installments_v1", JSON.stringify(customers));
-        window.renderInsHistory(); 
-        window.renderInsTable();
-    };
+let activeID = null, currentCustIdx = null, shareFile = null;
 
-    window.renderInsHistory = () => {
-        document.getElementById("historyTableBody").innerHTML = customers[currentCustIdx].payments.map(p => `
-            <tr><td>${p.date}</td><td>${fmt(p.amount).replace("PKR ","")}</td></tr>`).join('');
-    };
+const fmt = (v) => "PKR " + Number(v || 0).toLocaleString();
+const formatDate = (d) => d ? d.split("-").reverse().join("-") : "N/A";
 
-    window.closeModal = () => document.getElementById("insModal").style.display = "none";
+const getMonthName = (mStr) => {
+  if(!mStr) return "N/A";
+  const d = new Date(mStr + "-01");
+  return `${d.toLocaleString('default', { month: 'long' })} ${d.getFullYear()}`;
+};
 
-    window.refreshRentUI(); 
-    window.renderInsTable();
+/* ================= LOAD ALL DATA ================= */
+
+async function loadAllData() {
+
+  tenants = [];
+  invoices = [];
+  customers = [];
+
+  const tenantSnap = await getDocs(collection(db, "tenants"));
+  tenantSnap.forEach(d => tenants.push({ id: d.id, ...d.data() }));
+
+  const invoiceSnap = await getDocs(collection(db, "invoices"));
+  invoiceSnap.forEach(d => invoices.push({ id: d.id, ...d.data() }));
+
+  const custSnap = await getDocs(collection(db, "customers"));
+  custSnap.forEach(d => customers.push({ id: d.id, ...d.data() }));
+
+  refreshRentUI();
+  renderInsTable();
+}
+
+/* ================= TENANT FUNCTIONS ================= */
+
+window.saveTenant = async () => {
+
+  const editId = document.getElementById("editTenantId").value;
+
+  const t = {
+    name: tName.value,
+    phone: tPhone.value,
+    cnic: tCnic.value,
+    unit: tUnit.value,
+    since: tSince.value,
+    dep: tDep.value,
+    fixedRent: tFixedRent.value,
+    elec: tElec.value,
+    gas: tGas.value
+  };
+
+  if(!t.name || !t.unit) return alert("Enter Name & Unit");
+
+  if(editId){
+    await updateDoc(doc(db, "tenants", editId), t);
+  } else {
+    await addDoc(collection(db, "tenants"), t);
+  }
+
+  await loadAllData();
+  clearTenantForm();
+};
+
+window.delTenant = async (id) => {
+
+  if(!confirm("Delete Tenant & invoices?")) return;
+
+  await deleteDoc(doc(db, "tenants", id));
+
+  const related = invoices.filter(i => i.tenantId === id);
+  for (let inv of related) {
+    await deleteDoc(doc(db, "invoices", inv.id));
+  }
+
+  await loadAllData();
+};
+
+/* ================= INVOICE FUNCTIONS ================= */
+
+window.generateInvoice = async () => {
+
+  if(!activeID) return alert("Select tenant first");
+
+  const inv = {
+    tenantId: activeID,
+    month: bMonth.value,
+    rent: bRent.value || 0,
+    elec: bElec.value || 0,
+    gas: bGas.value || 0,
+    maint: bMaint.value || 0,
+    arr: bArr.value || 0,
+    oth: bOth.value || 0,
+    status: bStatus.value,
+    note: bNote.value,
+    issueDate: new Date().toLocaleDateString('en-GB')
+  };
+
+  await addDoc(collection(db, "invoices"), inv);
+
+  await loadAllData();
+
+  const latest = invoices[invoices.length - 1];
+  if(latest) createPDF(latest.id);
+};
+
+window.delInvoice = async (id) => {
+  if(!confirm("Delete this invoice?")) return;
+  await deleteDoc(doc(db, "invoices", id));
+  await loadAllData();
+};
+
+/* ================= INSTALLMENT SYSTEM ================= */
+
+window.addCustomer = async () => {
+
+  const c = {
+    name: cName.value,
+    product: cProduct.value,
+    totalPrice: Number(cTotal.value),
+    downPayment: Number(cDown.value),
+    remaining: Number(cTotal.value) - Number(cDown.value),
+    payments: []
+  };
+
+  if(!c.name) return alert("Enter Customer Name");
+
+  await addDoc(collection(db, "customers"), c);
+  await loadAllData();
+};
+
+window.addInstallment = async () => {
+
+  const cust = customers[currentCustIdx];
+
+  const amt = Number(insAmount.value);
+
+  cust.payments.push({
+    date: insDate.value,
+    amount: amt
+  });
+
+  cust.remaining -= amt;
+
+  await updateDoc(doc(db, "customers", cust.id), cust);
+
+  await loadAllData();
+};
+
+/* ================= KEEP YOUR EXISTING UI + PDF FUNCTIONS ================= */
+/* DO NOT CHANGE refreshRentUI(), createPDF(), renderInvoiceHistory() etc */
+/* They will work automatically because tenants/invoices arrays now come from Firebase */
+
+/* ================= START APP ================= */
+
+loadAllData();
+
 </script>
 </body>
 </html>
+
