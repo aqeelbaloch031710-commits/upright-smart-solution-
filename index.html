@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upright Smart Estate</title>
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+import { getFirestore, collection, addDoc, doc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBjaAhmnJ2vXijt9UIbEhmuRJHTZaUFO1A",
+  authDomain: "upright-management-cc29f.firebaseapp.com",
+  projectId: "upright-management-cc29f",
+  storageBucket: "upright-management-cc29f.firebasestorage.app",
+  messagingSenderId: "61396893247",
+  appId: "1:61396893247:web:406b3c44db76f8eaf7028a",
+  measurementId: "G-TNKWCM5VXS"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+window.db = getFirestore(app);
+</script>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{font-family:sans-serif;margin:0;padding:0;background:#f0f2f5;color:#1e293b;}
+header{background:#1e90ff;color:white;padding:15px;text-align:center;font-size:24px;font-weight:bold;}
+.container{max-width:1200px;margin:auto;padding:15px;}
+input,select,button{padding:5px;margin:5px;border-radius:4px;border:1px solid #ccc;}
+button{cursor:pointer;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+th,td{border:1px solid #ccc;padding:5px;text-align:left;}
+.dark-mode{background:#1e1e2f;color:#f0f0f0;}
+.dark-mode input, .dark-mode select{background:#333;color:white;border:1px solid #555;}
+.dashboard-header{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;}
+.stat-card{flex:1;min-width:180px;background:linear-gradient(135deg,#1e90ff,#00c6ff);color:white;padding:20px;border-radius:10px;text-align:center;box-shadow:0 5px 15px rgba(0,0,0,0.2);}
+.stat-card h3{font-size:22px;margin:0;}
+</style>
+</head>
+<body>
+<header>Upright Smart Estate</header>
+
+<div class="container">
+<!-- Dashboard -->
+<div class="dashboard-header">
+  <div class="stat-card">
+    <h3 id="totalTenants">0</h3>
+    <p>Total Tenants</p>
+  </div>
+  <div class="stat-card">
+    <h3 id="pendingAmount">0</h3>
+    <p>Pending Amount</p>
+  </div>
+  <div class="stat-card">
+    <h3 id="totalIncome">0</h3>
+    <p>Total Income</p>
+  </div>
+</div>
+
+<!-- Tenant Registration -->
+<h2>Register / Edit Tenant</h2>
+<div style="display:flex;gap:20px;flex-wrap:wrap;">
+<div style="flex:1;min-width:250px;">
+<label>Name:</label><input type="text" id="tName"><br>
+<label>CNIC:</label><input type="text" id="tCnic"><br>
+<label>Phone:</label><input type="text" id="tPhone"><br>
+</div>
+<div style="flex:1;min-width:250px;">
+<label>Premises on Rent:</label><input type="text" id="tPremises"><br>
+<label>Rented Since:</label><input type="date" id="tSince"><br>
+<label>Monthly Rent:</label><input type="number" id="tRent"><br>
+<label>Surety Deposit:</label><input type="number" id="tDeposit"><br>
+<label>Electricity Meter:</label><input type="text" id="tElec"><br>
+<label>Gas Meter:</label><input type="text" id="tGas"><br>
+</div>
+<div style="flex-basis:100%;margin-top:10px;">
+<button onclick="saveTenant()">Save Tenant</button>
+<button onclick="clearTenantForm()">Clear Form</button>
+</div>
+</div>
+
+<h3>Registered Tenants</h3>
+<table>
+<thead><tr><th>Name</th><th>Premises</th><th>Phone</th><th>Action</th></tr></thead>
+<tbody id="tenantTable"></tbody>
+</table>
+
+<!-- Billing Section -->
+<h2>Billing / Invoice</h2>
+<select id="billTenant" onchange="loadTenantData()"></select>
+<select id="billMonth"></select>
+<input type="number" id="billRent" placeholder="Monthly Rent">
+<input type="number" id="billGas" placeholder="Gas Bill">
+<input type="number" id="billElec" placeholder="Electricity Bill">
+<input type="number" id="billMaint" placeholder="Maintenance">
+<input type="number" id="billArr" placeholder="Previous Arrears" readonly>
+<input type="number" id="billOther" placeholder="Other Charges">
+<select id="billStatus"><option>Paid</option><option>Unpaid</option><option>Partial</option></select>
+<input type="text" id="billRemarks" placeholder="Remarks / Notes">
+<br>
+<button onclick="saveInvoice()">Save Invoice</button>
+<button onclick="previewInvoice()">Preview PDF</button>
+<button onclick="shareWhatsApp()">Share PDF WhatsApp</button>
+
+<h3>Invoice History</h3>
+<table>
+<thead><tr><th>Month</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+<tbody id="invoiceTable"></tbody>
+</table>
+
+<script type="module">
+
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { db } from "./"; // Already defined in above module
+
+let tenants = [];
+let invoices = [];
+let activeTenant = null;
+
+// UTILITIES
+const fmt = v => "Rs "+Number(v||0).toLocaleString();
+const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function formatMonth(dateStr){if(!dateStr) return ""; const d = new Date(dateStr); return months[d.getMonth()]+" "+d.getFullYear();}
+
+// LOAD TENANTS
+async function loadTenants(){
+  const snap = await getDocs(collection(db,"tenants"));
+  tenants = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const tBody = document.getElementById("tenantTable");
+  const select = document.getElementById("billTenant");
+  tBody.innerHTML = "";
+  select.innerHTML = "<option value=''>Select Tenant</option>";
+  tenants.forEach(t=>{
+    tBody.innerHTML += `<tr>
+    <td>${t.name}</td>
+    <td>${t.premises}</td>
+    <td>${t.phone}</td>
+    <td><button onclick="editTenant('${t.id}')">Edit</button> <button onclick="deleteTenant('${t.id}')">Delete</button></td>
+    </tr>`;
+    select.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+  });
+  loadDashboard();
+}
+
+// SAVE TENANT
+async function saveTenant(){
+  const tName = document.getElementById("tName").value;
+  const tCnic = document.getElementById("tCnic").value;
+  const tPhone = document.getElementById("tPhone").value;
+  const tPremises = document.getElementById("tPremises").value;
+  const tSince = document.getElementById("tSince").value;
+  const tRent = document.getElementById("tRent").value;
+  const tDeposit = document.getElementById("tDeposit").value;
+  const tElec = document.getElementById("tElec").value;
+  const tGas = document.getElementById("tGas").value;
+
+  if(!tName || !tPremises){alert("Name and Premises required"); return;}
+
+  if(activeTenant){
+    await updateDoc(doc(db,"tenants",activeTenant),{
+      name:tName,cnic:tCnic,phone:tPhone,premises:tPremises,since:tSince,monthlyRent:tRent,suretyDeposit:tDeposit,electricityMeter:tElec,gasMeter:tGas
+    });
+    activeTenant=null;
+  } else {
+    await addDoc(collection(db,"tenants"),{
+      name:tName,cnic:tCnic,phone:tPhone,premises:tPremises,since:tSince,monthlyRent:tRent,suretyDeposit:tDeposit,electricityMeter:tElec,gasMeter:tGas
+    });
+  }
+  clearTenantForm();
+  loadTenants();
+}
+
+function clearTenantForm(){
+  ["tName","tCnic","tPhone","tPremises","tSince","tRent","tDeposit","tElec","tGas"].forEach(id=>document.getElementById(id).value="");
+  activeTenant=null;
+}
+
+function editTenant(id){
+  activeTenant=id;
+  const t = tenants.find(x=>x.id===id);
+  if(!t) return;
+  document.getElementById("tName").value=t.name;
+  document.getElementById("tCnic").value=t.cnic;
+  document.getElementById("tPhone").value=t.phone;
+  document.getElementById("tPremises").value=t.premises;
+  document.getElementById("tSince").value=t.since;
+  document.getElementById("tRent").value=t.monthlyRent;
+  document.getElementById("tDeposit").value=t.suretyDeposit;
+  document.getElementById("tElec").value=t.electricityMeter;
+  document.getElementById("tGas").value=t.gasMeter;
+}
+
+async function deleteTenant(id){
+  if(confirm("Delete tenant and invoices?")){
+    await deleteDoc(doc(db,"tenants",id));
+    // delete invoices
+    const snap = await getDocs(collection(db,"invoices"));
+    snap.docs.forEach(async d=>{if(d.data().tenantId===id) await deleteDoc(doc(db,"invoices",d.id))});
+    loadTenants();
+  }
+}
+
+// BILLING
+function loadTenantData(){
+  const tId = document.getElementById("billTenant").value;
+  if(!tId) return;
+  const t = tenants.find(x=>x.id===tId);
+  document.getElementById("billRent").value=t.monthlyRent;
+  calculateArrears(tId);
+}
+
+async function calculateArrears(tId){
+  const snap = await getDocs(collection(db,"invoices"));
+  let arrears=0;
+  snap.docs.forEach(d=>{
+    const data=d.data();
+    if(data.tenantId===tId && data.status!=="Paid"){
+      arrears += Number(data.total||0);
+    }
+  });
+  document.getElementById("billArr").value=arrears;
+}
+
+async function saveInvoice(){
+  const tId=document.getElementById("billTenant").value;
+  const billMonthVal=document.getElementById("billMonth").value;
+  if(!tId || !billMonthVal){alert("Tenant and Month required");return;}
+  const t = tenants.find(x=>x.id===tId);
+
+  const monthlyRent=Number(document.getElementById("billRent").value||0);
+  const gasBill=Number(document.getElementById("billGas").value||0);
+  const electricityBill=Number(document.getElementById("billElec").value||0);
+  const maintenance=Number(document.getElementById("billMaint").value||0);
+  const previousArrears=Number(document.getElementById("billArr").value||0);
+  const otherCharges=Number(document.getElementById("billOther").value||0);
+  const total=monthlyRent+gasBill+electricityBill+maintenance+previousArrears+otherCharges;
+
+  const data={
+    tenantId:tId,billMonth:billMonthVal,monthlyRent,gasBill,electricityBill,maintenance,previousArrears,otherCharges,total,
+    status:document.getElementById("billStatus").value,
+    remarks:document.getElementById("billRemarks").value,
+    issueDate:new Date().toISOString(),
+    invoiceNo:"USS-"+Date.now()
+  };
+  await addDoc(collection(db,"invoices"),data);
+  alert("Invoice saved");
+  renderInvoices();
+  loadDashboard();
+}
+
+async function renderInvoices(){
+  const snap=await getDocs(collection(db,"invoices"));
+  const invoiceTable=document.getElementById("invoiceTable");
+  invoiceTable.innerHTML="";
+  snap.docs.forEach(d=>{
+    const i=d.data();
+    const t = tenants.find(x=>x.id===i.tenantId);
+    invoiceTable.innerHTML+=`<tr>
+    <td>${formatMonth(i.billMonth)}</td>
+    <td>${fmt(i.total)}</td>
+    <td>${i.status}</td>
+    <td>
+      <button onclick="previewInvoice('${d.id}')">Preview</button>
+      <button onclick="deleteInvoice('${d.id}')">Delete</button>
+    </td>
+    </tr>`;
+  });
+}
+
+async function deleteInvoice(id){
+  if(confirm("Delete invoice?")){
+    await deleteDoc(doc(db,"invoices",id));
+    renderInvoices();
+    loadDashboard();
+  }
+}
+
+async function previewInvoice(id){
+  const dSnap=await getDoc(doc(db,"invoices",id));
+  if(!dSnap.exists()) return;
+  const i=dSnap.data();
+  const t = tenants.find(x=>x.id===i.tenantId);
+  const { jsPDF } = window.jspdf;
+  const docPDF = new jsPDF();
+
+  // Header
+  docPDF.setFillColor(135,206,235);
+  docPDF.rect(0,0,210,35,"F");
+  docPDF.setTextColor(0);
+  docPDF.setFontSize(14);
+  docPDF.text("Upright Smart Estate",105,15,{align:"center"});
+  docPDF.setFontSize(11);
+  docPDF.text("Tenancy Monthly Statement",105,25,{align:"center"});
+
+  // Left Tenant Details
+  docPDF.text("Tenant Details:",20,40);
+  docPDF.text("Name: "+t.name,20,47);
+  docPDF.text("CNIC: "+t.cnic,20,54);
+  docPDF.text("Phone: "+t.phone,20,61);
+
+  // Right Property Details
+  docPDF.text("Property Details:",120,40);
+  docPDF.text("Premises: "+t.premises,120,47);
+  docPDF.text("Gas Meter: "+t.gasMeter,120,54);
+  docPDF.text("Electricity Meter: "+t.electricityMeter,120,61);
+  docPDF.text("Surety Deposit: "+t.suretyDeposit,120,68);
+  docPDF.text("Monthly Rent: "+t.monthlyRent,120,75);
+
+  // Charges Table
+  let y=85;
+  const rows=[
+    ["Monthly Rent",i.monthlyRent],
+    ["Gas Bill",i.gasBill],
+    ["Electricity Bill",i.electricityBill],
+    ["Maintenance",i.maintenance],
+    ["Previous Arrears",i.previousArrears],
+    ["Other Charges",i.otherCharges],
+    ["Total",i.total]
+  ];
+  rows.forEach(row=>{
+    docPDF.rect(20,y,170,10);
+    docPDF.text(row[0],25,y+7);
+    docPDF.text(fmt(row[1]),160,y+7);
+    y+=10;
+  });
+  docPDF.text("Status: "+i.status,20,y+10);
+  docPDF.text("Remarks: "+i.remarks,20,y+20);
+
+  docPDF.text("Landlord Signature: ____________",20,270);
+  docPDF.text("Tenant Signature: ____________",120,270);
+
+  docPDF.save("Invoice_"+t.name+"_"+i.billMonth+".pdf");
+}
+
+async function shareWhatsApp(){
+  alert("PDF downloaded. Share via WhatsApp manually.");
+}
+
+// Load dashboard stats
+async function loadDashboard(){
+  const tSnap=await getDocs(collection(db,"tenants"));
+  document.getElementById("totalTenants").innerText=tSnap.size;
+  const invSnap=await getDocs(collection(db,"invoices"));
+  let pending=0,total=0;
+  invSnap.docs.forEach(d=>{
+    const i=d.data();
+    total+=Number(i.total||0);
+    if(i.status!=="Paid") pending+=Number(i.total||0);
+  });
+  document.getElementById("pendingAmount").innerText=fmt(pending);
+  document.getElementById("totalIncome").innerText=fmt(total);
+}
+
+// Populate month dropdown
+const monthSelect=document.getElementById("billMonth");
+for(let m=1;m<=12;m++){
+  monthSelect.innerHTML+=`<option value="${m}">${months[m-1]}</option>`;
+}
+
+// INITIAL LOAD
+loadTenants();
+renderInvoices();
+
+</script>
+</div>
+</body>
+</html>
